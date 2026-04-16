@@ -35,4 +35,12 @@ class InstrumentSet:
         self.updated_at = self.created_at
 
 
-class Sterilization
+class Sterilization_Batch:
+    def __init__(self , id , operator_id , temperature , cycle_duration , status = 'In Progress' , created_at = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')):
+        self.id = id
+        self.operator_id = operator_id
+        self.temperature = temperature
+        self.cycle_duration = cycle_duration
+        self.status = status
+
+
