@@ -15,6 +15,8 @@ class State(Enum):
 
 
 
+# Models
+
 class User:
     def __init__(self , id , email , hashed_password , role , departement):
         self.id = id
