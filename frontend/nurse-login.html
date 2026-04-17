@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nurse Login - CSSD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -25,13 +26,12 @@
     <main class="main-content">
       <div class="login-container-wrapper">
         
-        <a href="index.html" class="back-link">
+        <a href="{% url 'home' %}" class="back-link">
           <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
           Back to role selection
         </a>
 
         <div class="login-card">
-          
           <div class="login-header">
             <div class="app-icon teal">
               <i data-lucide="stethoscope" style="width: 32px; height: 32px;"></i>
@@ -40,33 +40,28 @@
             <p class="login-subtitle">Enter your credentials to access the portal</p>
           </div>
 
-          <form id="loginForm" data-role="Nurse">
+          <form method="POST" action="{% url 'login' %}?role=nurse" id="loginForm" data-role="Nurse">
+            {% csrf_token %}
             
+            {% if form.non_field_errors %}
+              <div class="security-notice notice-warning" style="margin-bottom: 1rem; border-color: #ef4444; background: #fef2f2; color: #b91c1c;">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
             <div class="form-group">
-              <label for="email" class="form-label">Email Address</label>
+              <label for="{{ form.username.id_for_label }}" class="form-label">Email Address</label>
               <div class="input-wrapper">
                 <i data-lucide="mail" class="input-icon"></i>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="nurse@hospital.com"
-                  class="form-input"
-                  required
-                />
+                {{ form.username }}
               </div>
             </div>
 
             <div class="form-group">
-              <label for="password" class="form-label">Password</label>
+              <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
               <div class="input-wrapper">
                 <i data-lucide="lock" class="input-icon"></i>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  class="form-input"
-                  required
-                />
+                {{ form.password }}
                 <button type="button" class="btn-toggle-password" id="togglePasswordBtn">
                   <i data-lucide="eye" id="eyeIcon"></i>
                 </button>
@@ -91,17 +86,13 @@
             <i data-lucide="shield-alert" class="security-icon"></i>
             <div class="security-content">
               <h4>Security Notice</h4>
-              <p>
-                This system contains confidential patient information. Unauthorized access is prohibited and will be prosecuted.
-              </p>
+              <p>This system contains confidential patient information. Unauthorized access is prohibited.</p>
             </div>
           </div>
-
         </div>
       </div>
     </main>
   </div>
-
-  <script src="script.js"></script>
+  <script src="{% static 'script.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Alerts</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <!-- Navbar -->
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'cssd_dashboard' %}" class="btn-back-icon">
+          <i data-lucide="arrow-left"></i>
+        </a>
+        <div class="nav-title">
+          <h2>Inventory Alerts</h2>
+          <p>Stock Level Monitoring</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="alert-banner">
+          <i data-lucide="alert-triangle"></i> {{ total_alerts }} unacknowledged alerts
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-main alerts-main">
+      <div class="container-center">
+        
+        <!-- Alerts Stat row -->
+        <div class="cssd-stats-grid alerts-stats">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Alerts</span>
+              <i data-lucide="package" class="stat-icon-small grey"></i>
+            </div>
+            <h3 class="stat-value">{{ total_alerts }}</h3>
+            <p class="stat-desc">Items requiring attention</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Critical</span>
+              <i data-lucide="alert-triangle" class="stat-icon-small red-bg"></i>
+            </div>
+            <h3 class="stat-value">{{ critical }}</h3>
+            <p class="stat-desc">Immediate action needed</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Low Stock</span>
+              <i data-lucide="package-minus" class="stat-icon-small yellow-bg"></i>
+            </div>
+            <h3 class="stat-value">{{ low_stock }}</h3>
+            <p class="stat-desc">Monitor closely</p>
+          </div>
+        </div>
+
+        <div class="detail-card list-card">
+          <div class="card-header pb-border">
+            <h4>Alert Items</h4>
+          </div>
+          
+          <div class="alert-list">
+            {% for item in alerts %}
+            <div class="alert-list-item">
+              <div class="ali-main">
+                <div class="ali-title-bar">
+                  <h4>{{ item.name }}</h4>
+                  <span class="pill pill-{{ item.status|lower }}">{{ item.status }}</span>
+                </div>
+                
+                <div class="ali-stats">
+                  <div class="ali-stat">
+                    <span class="as-label">Current Stock</span>
+                    <span class="as-val {% if item.status == 'Critical' %}text-red{% else %}text-yellow{% endif %}">{{ item.current_stock }}</span>
+                  </div>
+                  <div class="ali-stat">
+                    <span class="as-label">Minimum Threshold</span>
+                    <span class="as-val">{{ item.min_threshold }}</span>
+                  </div>
+                </div>
+
+                <div class="stock-progress">
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill {% if item.status == 'Critical' %}bg-red{% else %}bg-yellow{% endif %}" style="width: {{ item.percentage }}%;"></div>
+                  </div>
+                  <span class="progress-text">{{ item.percentage|floatformat:0 }}% of minimum threshold</span>
+                </div>
+              </div>
+
+              <div class="ali-actions">
+                <button class="btn-primary">Request Restock</button>
+                <button class="btn-outline">Acknowledge</button>
+              </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Prototype items removed -->
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

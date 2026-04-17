@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nurse Dashboard - CSSD</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+    <!-- Navbar -->
+    <nav class="dashboard-nav theme-dark-teal">
+      <div class="nav-brand">
+        <div class="nav-logo teal">
+          <i data-lucide="stethoscope"></i>
+        </div>
+        <div class="nav-title">
+          <h2>Nurse Portal</h2>
+          <p>{{ nurse_name }} • {{ nurse_ward }}</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button class="icon-btn" aria-label="Notifications">
+          <i data-lucide="bell"></i>
+          <!-- Optional badge -->
+        </button>
+        <a href="{% url 'logout' %}" class="btn-logout">
+          <i data-lucide="log-out"></i> Logout
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+        
+        <!-- Action Header -->
+        <div class="action-header">
+          <a href="{% url 'nurse_create_request' %}" class="btn-create-request" style="text-decoration: none;">
+            <i data-lucide="plus"></i> Create New Request
+            <span class="badge-pill">Quick Access</span>
+          </a>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Total Requests</span>
+              <h3 class="stat-value">{{ stats.total }}</h3>
+            </div>
+            <i data-lucide="package" class="stat-icon blue"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">In Progress</span>
+              <h3 class="stat-value">{{ stats.in_progress }}</h3>
+            </div>
+            <i data-lucide="clock" class="stat-icon orange"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Urgent</span>
+              <h3 class="stat-value">{{ stats.urgent }}</h3>
+            </div>
+            <i data-lucide="alert-circle" class="stat-icon red"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Delivered</span>
+              <h3 class="stat-value">{{ stats.delivered }}</h3>
+            </div>
+            <i data-lucide="check-circle-2" class="stat-icon green"></i>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <div class="search-input-wrapper">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search by request ID or department...">
+          </div>
+          <div class="filter-dropdowns">
+            <button class="filter-btn">
+              <i data-lucide="filter"></i> All Status
+            </button>
+            <button class="filter-btn">
+              All Priority
+            </button>
+          </div>
+        </div>
+
+        <!-- Requests List -->
+        <div class="requests-list">
+          {% for req in requests %}
+          <a href="{% url 'nurse_request_detail' req.id %}" class="request-card" style="text-decoration: none; color: inherit; display: block;">
+            <div class="req-header">
+              <div class="req-title-group">
+                <h4 class="req-id">REQ-{{ req.id|stringformat:"04d" }}</h4>
+                {% if req.priority == 'Urgent' %}
+                <span class="pill pill-urgent">Urgent</span>
+                {% else %}
+                <span class="pill pill-normal">Normal</span>
+                {% endif %}
+              </div>
+              <div class="req-status">
+                <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
+              </div>
+            </div>
+            
+            <div class="req-body">
+              <p class="req-ward"><i data-lucide="map-pin"></i> {{ req.department }}</p>
+              
+              <div class="req-instruments">
+                <span class="instruments-label">Instruments:</span>
+                <div class="instruments-tags">
+                  {% for item in req.items.all %}
+                  <span class="tag-instrument">{{ item.inventory_item.name }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            
+            <div class="req-footer">
+              <span class="submit-time">Submitted: {{ req.submitted_at|date:'Y-m-d H:i' }}</span>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

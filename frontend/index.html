@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hospital Management System - CSSD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -35,7 +36,7 @@
 
         <div class="role-cards">
           
-          <a href="nurse-login.html" class="role-card">
+          <a href="{% url 'login' %}?role=nurse" class="role-card">
             <div class="card-header">
               <div class="card-icon teal">
                 <i data-lucide="stethoscope" style="width: 28px; height: 28px;"></i>
@@ -54,7 +55,7 @@
             </ul>
           </a>
 
-          <a href="staff-login.html" class="role-card">
+          <a href="{% url 'login' %}?role=staff" class="role-card">
             <div class="card-header">
               <div class="card-icon blue">
                 <i data-lucide="shield" style="width: 28px; height: 28px;"></i>
@@ -93,6 +94,6 @@
     </footer>
   </div>
 
-  <script src="script.js"></script>
+  <script src="{% static 'script.js' %}"></script>
 </body>
 </html>
