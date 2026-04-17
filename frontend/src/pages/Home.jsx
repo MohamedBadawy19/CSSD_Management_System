@@ -7,7 +7,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <>
+    <div className="page-wrapper">
       <Header 
         title="Hospital Management System" 
         subtitle="Central Sterile Supply Department" 
@@ -88,6 +88,6 @@ export default function Home() {
       <footer className="footer">
         <p>Need help? Contact IT support: <a href="tel:1-800-123-4567">1-800-123-4567</a></p>
       </footer>
-    </>
+    </div>
   );
 }

@@ -40,10 +40,11 @@ export default function LoginPage({ role = "nurse" }) {
   };
 
   return (
-    <>
+    <div className={`page-wrapper theme-${pageContent.themeClass}`}>
       <Header 
         title={pageContent.headerTitle} 
-        subtitle={pageContent.headerSubtitle} 
+        subtitle={pageContent.headerSubtitle}
+        themeClass={`theme-${pageContent.themeClass}`}
       />
 
       <main className="main-content">
@@ -154,6 +155,6 @@ export default function LoginPage({ role = "nurse" }) {
           </div>
         </div>
       </main>
-    </>
+    </div>
   );
 }
