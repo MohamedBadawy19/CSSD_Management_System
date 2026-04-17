@@ -1,15 +1,54 @@
-from django.http import HttpRequest 
-from django.shortcuts import render 
-from django.views.decorators.csrf import csrf_exempt
-import os 
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from .forms import EmailLoginForm
+from .decorators import cssd_staff_required
+from django.http import HttpResponse
 
-templates_path = os.path.join( os.path.dirname(__file__), 'templates')
+def login_view(request):
+    if request.method == 'POST':
+        form = EmailLoginForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('dashboard_router')
+    else:
+        form = EmailLoginForm()
+    return render(request, 'auth/login.html', {'form': form})
 
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 
+@login_required
+def dashboard_router(request):
+    """
+    FR-02: Role-Based Dashboard Routing
+    Detects the user’s role and routes them to their corresponding dashboard.
+    """
+    role = request.user.role
+    if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
+        return redirect('cssd_dashboard')
+    elif role == 'Department Nurse':
+        return redirect('nurse_dashboard')
+    else:
+        return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
 
-# HTML FILES PATHS
-main_path = os.path.join(templates_path , 'home.html')
+@login_required
+@cssd_staff_required
+def cssd_dashboard(request):
+    """
+    Dashboard for CSSD Staff (Technicians, Admins, etc.)
+    Blocked for Nurses.
+    """
+    return HttpResponse(f"<h1>CSSD Staff Dashboard</h1><p>Welcome, {request.user.email} (Role: {request.user.role})</p><a href='/logout/'>Logout</a>")
 
-@csrf_exempt
+@login_required
+def nurse_dashboard(request):
+    """
+    Dashboard for Department Nurses.
+    """
+    return HttpResponse(f"<h1>Department Nurse Dashboard</h1><p>Welcome, {request.user.email} (Role: {request.user.role})</p><a href='/logout/'>Logout</a>")
+
 def home(request):
-    return render(request , main_path )
+    return redirect('login')

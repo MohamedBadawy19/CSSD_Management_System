@@ -116,3 +116,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Custom User Model
+AUTH_USER_MODEL = 'CSSD_Management_System.CustomUser'
+
+# Authentication Settings
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard_router'
+LOGOUT_REDIRECT_URL = 'login'
