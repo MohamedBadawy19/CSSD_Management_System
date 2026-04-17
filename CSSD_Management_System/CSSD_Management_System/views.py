@@ -6,6 +6,10 @@ from .decorators import cssd_staff_required
 from django.http import HttpResponse
 
 def login_view(request):
+    # Determine which template to show based on a URL parameter
+    role_type = request.GET.get('role', 'staff')
+    template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
+
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
         if form.is_valid():
@@ -14,7 +18,13 @@ def login_view(request):
             return redirect('dashboard_router')
     else:
         form = EmailLoginForm()
-    return render(request, 'auth/login.html', {'form': form})
+    
+    # Render the specific role-based template
+    return render(request, template_name, {'form': form})
+
+def home(request):
+    # Instead of a redirect, render your selection page
+    return render(request, 'index.html')
 
 def logout_view(request):
     logout(request)
@@ -50,5 +60,3 @@ def nurse_dashboard(request):
     """
     return HttpResponse(f"<h1>Department Nurse Dashboard</h1><p>Welcome, {request.user.email} (Role: {request.user.role})</p><a href='/logout/'>Logout</a>")
 
-def home(request):
-    return redirect('login')

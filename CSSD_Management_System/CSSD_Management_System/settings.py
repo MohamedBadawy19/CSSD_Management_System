@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -115,7 +115,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Custom User Model
 AUTH_USER_MODEL = 'CSSD_Management_System.CustomUser'
@@ -124,3 +124,7 @@ AUTH_USER_MODEL = 'CSSD_Management_System.CustomUser'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard_router'
 LOGOUT_REDIRECT_URL = 'login'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'CSSD_Management_System', 'static'),
+]
