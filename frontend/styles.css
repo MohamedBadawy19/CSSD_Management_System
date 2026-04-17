@@ -38,13 +38,6 @@ body {
   flex-direction: column;
 }
 
-#root {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
-}
-
 h1, h2, h3, h4, h5, h6, p {
   margin: 0;
 }
@@ -217,6 +210,9 @@ a {
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  display: block; 
+  text-decoration: none;
+  color: inherit;
 }
 
 .role-card:hover {
@@ -254,6 +250,8 @@ a {
 .card-arrow {
   color: #94a3b8;
   transition: all 0.3s ease;
+  width: 24px;
+  height: 24px;
 }
 
 .role-card:hover .card-arrow {
@@ -315,6 +313,8 @@ a {
   color: #d97706;
   flex-shrink: 0;
   margin-top: 0.125rem;
+  width: 20px;
+  height: 20px;
 }
 
 .security-content h4 {
@@ -365,6 +365,7 @@ a {
   font-weight: 500;
   margin-bottom: 1.5rem;
   transition: color 0.2s ease;
+  text-decoration: none;
 }
 
 .back-link:hover {
@@ -429,6 +430,8 @@ a {
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
+  width: 18px;
+  height: 18px;
 }
 
 .form-input {
@@ -465,6 +468,12 @@ a {
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
+  display: flex;
+}
+
+.btn-toggle-password svg {
+  width: 18px;
+  height: 18px;
 }
 
 .btn-toggle-password:hover {
@@ -548,19 +557,7 @@ a {
   cursor: not-allowed;
 }
 
-.spinner {
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.login-security-notice {
-  margin-top: 1.5rem;
+/* Adding a custom icon base size setting since we are using unpkg SVGs */
+.lucide {
+  color: currentColor;
 }
