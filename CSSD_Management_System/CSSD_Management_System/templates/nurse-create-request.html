@@ -17,7 +17,7 @@
         <div class="nav-title"><h2>New Instrument Request</h2><p>Submit request to CSSD</p></div>
       </div>
       <div class="nav-actions">
-        <a href="nurse-dashboard.html" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+        <a href= "{% url 'nurse_dashboard' %}" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
       </div>
     </nav>
 
@@ -123,7 +123,7 @@
             <button type="submit" class="btn-submit" id="submitBtn" >
               <i data-lucide="check-circle-2"></i> Submit Request
             </button>
-            <a href="{% url 'nurse_dashboard' %}"class="btn-outline">Cancel</a>
+            <a href="{% url 'nurse_create_request' %}"class="btn-outline">Cancel</a>
           </div>
         </form>
       </div>
