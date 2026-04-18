@@ -1,10 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nurse Dashboard - CSSD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet"href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -41,7 +43,7 @@
 
         <!-- Create request CTA -->
         <div class="action-header">
-          <a href="nurse-create-request.html" class="btn-create-request" style="text-decoration:none;">
+          <a href="{% url 'nurse_create_request' %}" class="btn-create-request" style="text-decoration:none;">
             <i data-lucide="plus"></i> Create New Request
             <span class="badge-pill">Quick Access</span>
           </a>
@@ -82,9 +84,9 @@
     </main>
   </div>
 
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/script.js"></script>
-  <script>
+  <script src="../static/mock-data.js"></script>
+  <script src="../static/script.js"></script>
+  <!-- <script>
     // Nurse sees only "her" requests (first 5 for demo)
     const nurseEmail = 'nurse.ali@hospital.com';
     const myRequests = MOCK.requests.slice(0, 6); // demo: show first 6
@@ -100,43 +102,7 @@
     }
     function fmtEta(m) { return m === 0 ? 'Delivered' : m < 60 ? `~${m} min` : `~${(m/60).toFixed(1)} hr`; }
 
-    function renderList(reqs) {
-      const el = document.getElementById('requestsList');
-      if (!reqs.length) {
-        el.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
-          <i data-lucide="inbox" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
-          <p>No active requests. Create your first request above.</p></div>`;
-        lucide.createIcons(); return;
-      }
-      el.innerHTML = reqs.map(req => {
-        const color = statusColors[req.status] || '#64748b';
-        const eta   = etaMins(req);
-        return `
-        <a href="nurse-request-details.html?id=${req.id}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
-          <div class="req-header">
-            <div class="req-title-group">
-              <h4 class="req-id">REQ-${String(req.id).padStart(4,'0')}</h4>
-              ${req.priority==='Urgent'
-                ? '<span class="pill pill-urgent">Urgent</span>'
-                : '<span class="pill pill-normal">Normal</span>'}
-            </div>
-            <span class="pill" style="background:${color}20;color:${color};border:1px solid ${color}40;border-radius:999px;padding:2px 10px;font-size:.78rem;">${req.status}</span>
-          </div>
-          <div class="req-body">
-            <p class="req-ward"><i data-lucide="map-pin"></i> ${req.department}</p>
-            <div class="req-instruments">
-              <span class="instruments-label">Instruments:</span>
-              <div class="instruments-tags">${req.items.map(i => `<span class="tag-instrument">${i}</span>`).join('')}</div>
-            </div>
-          </div>
-          <div class="req-footer" style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;padding-top:.75rem;">
-            <span class="submit-time"><i data-lucide="clock" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> ${req.submitted_at}</span>
-            ${req.status !== 'Delivered' ? `<span class="submit-time" style="color:#0d9488;font-weight:600;"><i data-lucide="timer" style="width:14px;height:14px;vertical-align:middle;margin-right:2px;"></i> ${fmtEta(eta)}</span>` : ''}
-          </div>
-        </a>`;
-      }).join('');
-      lucide.createIcons();
-    }
+
 
     function markRead() {
       MOCK.notifications.forEach(n => n.is_read = true);
@@ -176,6 +142,6 @@
         ));
       });
     });
-  </script>
+  </script> -->
 </body>
 </html>
