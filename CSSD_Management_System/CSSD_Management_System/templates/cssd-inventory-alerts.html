@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Alerts - CSSD</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/extended_styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="cssd-dashboard.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title">
+          <h2>Inventory Alerts</h2>
+          <p>Stock Level Monitoring</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="alert-banner">
+          <i data-lucide="alert-triangle"></i>
+          <span id="alertBannerCount">—</span> unacknowledged alerts
+        </div>
+      </div>
+    </nav>
+
+    <main class="dashboard-main alerts-main">
+      <div class="container-center">
+
+        <!-- Stats -->
+        <div class="cssd-stats-grid alerts-stats">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Alerts</span>
+              <i data-lucide="package" class="stat-icon-small grey"></i>
+            </div>
+            <h3 class="stat-value" id="statTotal">—</h3>
+            <p class="stat-desc">Items requiring attention</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Critical (Out of Stock)</span>
+              <i data-lucide="alert-triangle" class="stat-icon-small red-bg"></i>
+            </div>
+            <h3 class="stat-value" id="statCritical">—</h3>
+            <p class="stat-desc">Immediate action needed</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Low Stock</span>
+              <i data-lucide="package-minus" class="stat-icon-small yellow-bg"></i>
+            </div>
+            <h3 class="stat-value" id="statLow">—</h3>
+            <p class="stat-desc">Monitor closely</p>
+          </div>
+        </div>
+
+        <!-- Alert list -->
+        <div class="detail-card list-card">
+          <div class="card-header pb-border"><h4>Alert Items</h4></div>
+          <div class="alert-list" id="alertList">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/mock-data.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const alerts   = MOCK.getAlerts();
+      const critical = alerts.filter(i => i.current_stock === 0);
+      const low      = alerts.filter(i => i.current_stock > 0 && i.current_stock < 3);
+
+      document.getElementById('statTotal').textContent    = alerts.length;
+      document.getElementById('statCritical').textContent = critical.length;
+      document.getElementById('statLow').textContent      = low.length;
+      document.getElementById('alertBannerCount').textContent = alerts.length;
+
+      const list = document.getElementById('alertList');
+      if (!alerts.length) {
+        list.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><p>🎉 No inventory alerts right now!</p></div>';
+        return;
+      }
+
+      list.innerHTML = alerts.map(item => {
+        const isCritical = item.current_stock === 0;
+        const pct = Math.round((item.current_stock / item.min_stock) * 100);
+        const barColor = isCritical ? '#ef4444' : '#f59e0b';
+        const textColor = isCritical ? '#dc2626' : '#d97706';
+        const status = isCritical ? 'Critical' : 'Low Stock';
+        const pillStyle = isCritical
+          ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
+          : 'background:#fffbeb;color:#d97706;border:1px solid #fcd34d;';
+
+        return `
+        <div class="alert-list-item" id="alert-${item.id}">
+          <div class="ali-main">
+            <div class="ali-title-bar">
+              <h4>${item.name}</h4>
+              <span class="pill" style="${pillStyle}">${status}</span>
+            </div>
+            <div class="ali-stats">
+              <div class="ali-stat">
+                <span class="as-label">Current Stock</span>
+                <span class="as-val" style="color:${textColor};font-weight:700;">${item.current_stock}</span>
+              </div>
+              <div class="ali-stat">
+                <span class="as-label">Minimum Threshold</span>
+                <span class="as-val">${item.min_stock}</span>
+              </div>
+              <div class="ali-stat">
+                <span class="as-label">Category</span>
+                <span class="as-val">${item.category}</span>
+              </div>
+            </div>
+            <div class="stock-progress">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width:${Math.min(pct,100)}%;background:${barColor};"></div>
+              </div>
+              <span class="progress-text">${pct}% of minimum threshold</span>
+            </div>
+          </div>
+          <div class="ali-actions">
+            <button class="btn-primary" onclick="restockAlert(${item.id}, this)">Request Restock</button>
+            <button class="btn-outline" onclick="acknowledgeAlert(${item.id})">Acknowledge</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      lucide.createIcons();
+    });
+
+    function acknowledgeAlert(id) {
+      const el = document.getElementById(`alert-${id}`);
+      if (el) {
+        el.style.opacity = '0.4';
+        el.style.pointerEvents = 'none';
+        const btn = el.querySelector('.btn-outline');
+        if (btn) { btn.textContent = '✓ Acknowledged'; btn.style.color = '#10b981'; }
+      }
+    }
+
+    function restockAlert(id, btn) {
+      btn.textContent = '✓ Requested';
+      btn.disabled = true;
+      btn.style.background = '#10b981';
+    }
+  </script>
+</body>
+</html>
