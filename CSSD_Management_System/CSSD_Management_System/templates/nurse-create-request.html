@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Instrument Request - Nurse Portal</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet"href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+    <nav class="dashboard-nav theme-dark-teal">
+      <div class="nav-brand">
+        <div class="nav-logo teal"><i data-lucide="stethoscope"></i></div>
+        <div class="nav-title"><h2>New Instrument Request</h2><p>Submit request to CSSD</p></div>
+      </div>
+      <div class="nav-actions">
+        <a href="nurse-dashboard.html" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main form-main">
+      <div class="container-center form-container">
+
+        {% if warning %}
+        <div id="errorBanner" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#b91c1c;">
+          ⚠ {{ warning }}
+        </div>
+        {% endif %}
+        <div id="successBanner" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;"></div>
+
+        <form id="createForm" method ='post' action="{% url 'save_instrument_request' %}">
+          {% csrf_token %}
+          <!-- Priority -->
+          <div class="form-section">
+            <label class="form-label">PRIORITY LEVEL</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="priority" value="Normal" checked>
+                <span class="custom-radio active-blue"></span> Normal
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="priority" value="Urgent">
+                <span class="custom-radio red"></span> Urgent
+              </label>
+            </div>
+          </div>
+
+          <!-- Instrument table -->
+          <div class="form-section">
+            <label class="form-label">SELECT INSTRUMENTS</label>
+            <div class="instrument-table">
+              <div class="it-header">
+                <div class="it-col-main">INSTRUMENT</div>
+                <div class="it-col-status">AVAILABILITY</div>
+                <div class="it-col-qty">QUANTITY</div>
+              </div>
+              <div class="it-body" id="instrumentBody"><!-- JS --></div>
+            </div>
+          </div>
+          
+          
+                  <div class="it-body">
+          {% for item in instruments %}
+          <div class="it-row">
+            
+            <!-- Instrument name -->
+            <div class="it-col-main">
+              <label class="checkbox-label">
+                <input type="checkbox" name = 'instruments' value = "{{ item.name }}">
+                <span class="custom-cb"></span>
+                {{ item.name }}
+              </label>
+            </div>
+
+            <!-- Availability -->
+            <div class="it-col-status">
+              {% if item.current_stock == 0 %}
+                <span class="pill pill-urgent">Out of Stock ({{ item.current_stock }})</span>
+              {% elif item.current_stock < 3 %}
+                <span class="pill pill-normal">Low Stock ({{ item.current_stock }})</span>
+              {% else %}
+                <span class="pill pill-outline-delivered">Available ({{ item.current_stock }})</span>
+              {% endif %}
+            </div>
+
+            <!-- Quantity input -->
+            <div class="it-col-qty">
+              {% if item.current_stock > 0 %}
+                <input 
+                  type="number" 
+                  name="quantity_{{ item.name }}" 
+                  min="0" 
+                  max="{{ item.current_stock }}" 
+                  value="0"
+                  class="form-input"
+                  
+                >
+              {% else %}
+                <span style="color:#94a3b8;">—</span>
+              {% endif %}
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+
+
+          <!-- Selection banner -->
+          <div class="selection-banner " id="selBanner">
+            <strong><span id="selInst">0</span> instrument(s) selected · <span id="selTotal">0</span> total items</strong>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-section" style="margin-top:1.5rem;">
+            <label class="form-label">NOTES (OPTIONAL)</label>
+            <textarea name="notes" id="notesInput" class="form-textarea" placeholder="Add any special instructions or comments…"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" id="submitBtn" >
+              <i data-lucide="check-circle-2"></i> Submit Request
+            </button>
+            <a href="{% url 'nurse_dashboard' %}"class="btn-outline">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="../static/mock-data.js"></script>
+  <script src="../static/script.js"></script>
+  <script>
+
+    document.querySelectorAll('.stepper-btn.plus').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = btn.closest('.it-col-qty').querySelector('input');
+    input.stepUp();
+    input.dispatchEvent(new Event('input'));
+  });
+});
+
+document.querySelectorAll('.stepper-btn.minus').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = btn.closest('.it-col-qty').querySelector('input');
+    input.stepDown();
+    input.dispatchEvent(new Event('input'));
+  });
+});
+
+function updateBanner() {
+  const inputs = document.querySelectorAll('input[type="number"]');
+  let count = 0;
+  let total = 0;
+
+  inputs.forEach(input => {
+    const val = parseInt(input.value) || 0;
+    if (val > 0) {
+      count++;
+      total += val;
+    }
+  });
+
+  document.getElementById('selInst').textContent = count;
+  document.getElementById('selTotal').textContent = total;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = count === 0;
+}
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+  input.addEventListener('input', updateBanner);
+});
+
+lucide.createIcons();
+
+
+
+
+
+  </script>
+  <!-- <script>
+    const quantities = {}; // id -> qty
+
+    function getAvailability(item) {
+      if (item.current_stock === 0)  return { label: 'Out of Stock', cls: 'pill-urgent' };
+      if (item.current_stock < 3)    return { label: 'Low Stock',    cls: 'pill-normal' };
+      return                                  { label: 'Available',   cls: 'pill-outline-delivered' };
+    }
+
+    function renderInstruments() {
+      const body = document.getElementById('instrumentBody');
+      body.innerHTML = MOCK.inventory.map(item => {
+        const av = getAvailability(item);
+        return `
+        <div class="it-row" id="row_${item.id}">
+          <div class="it-col-main">
+            <label class="checkbox-label">
+              <input type="checkbox" class="instrument-cb" data-id="${item.id}" ${item.current_stock===0?'disabled':''}>
+              <span class="custom-cb"></span>
+              ${item.name}
+            </label>
+          </div>
+          <div class="it-col-status">
+            <span class="pill ${av.cls}" style="font-size:.72rem;">${av.label} (${item.current_stock})</span>
+          </div>
+          <div class="it-col-qty">
+            <span class="qty-dash" id="dash_${item.id}">—</span>
+            <div class="qty-stepper hidden" id="stepper_${item.id}">
+              <button type="button" class="stepper-btn minus" data-id="${item.id}"><i data-lucide="minus"></i></button>
+              <span class="qty-display" id="display_${item.id}">1</span>
+              <button type="button" class="stepper-btn plus" data-id="${item.id}"><i data-lucide="plus"></i></button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Wire checkboxes
+      document.querySelectorAll('.instrument-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const id = cb.dataset.id;
+          const stepper = document.getElementById(`stepper_${id}`);
+          const dash    = document.getElementById(`dash_${id}`);
+          const row     = document.getElementById(`row_${id}`);
+          if (cb.checked) {
+            quantities[id] = 1;
+            stepper.classList.remove('hidden');
+            dash.classList.add('hidden');
+            row.classList.add('checked-row');
+          } else {
+            delete quantities[id];
+            stepper.classList.add('hidden');
+            dash.classList.remove('hidden');
+            row.classList.remove('checked-row');
+          }
+          updateBanner();
+        });
+      });
+
+      // Wire steppers
+      document.querySelectorAll('.stepper-btn.plus').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id   = btn.dataset.id;
+          const item = MOCK.inventory.find(i => String(i.id) === id);
+          quantities[id] = Math.min((quantities[id]||1)+1, item.current_stock);
+          document.getElementById(`display_${id}`).textContent = quantities[id];
+          updateBanner();
+        });
+      });
+      document.querySelectorAll('.stepper-btn.minus').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          quantities[id] = Math.max((quantities[id]||1)-1, 1);
+          document.getElementById(`display_${id}`).textContent = quantities[id];
+          updateBanner();
+        });
+      });
+
+      lucide.createIcons();
+    }
+
+    function updateBanner() {
+      const count = Object.keys(quantities).length;
+      const total = Object.values(quantities).reduce((a,b)=>a+b,0);
+      document.getElementById('selInst').textContent  = count;
+      document.getElementById('selTotal').textContent = total;
+      const banner = document.getElementById('selBanner');
+      banner.classList.toggle('hidden', count === 0);
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = count === 0;
+      btn.classList.toggle('active', count > 0);
+    }
+
+    document.getElementById('createForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const errorEl   = document.getElementById('errorBanner');
+      const successEl = document.getElementById('successBanner');
+      errorEl.style.display = 'none';
+
+      // Validate stock
+      let errors = [];
+      Object.entries(quantities).forEach(([id, qty]) => {
+        const item = MOCK.inventory.find(i => String(i.id) === id);
+        if (qty > item.current_stock) {
+          errors.push(`Insufficient stock for ${item.name}. Requested: ${qty}, Available: ${item.current_stock}`);
+        }
+      });
+
+      if (errors.length) {
+        errorEl.innerHTML = errors.map(e => `⚠ ${e}`).join('<br>');
+        errorEl.style.display = '';
+        return;
+      }
+
+      const priority = document.querySelector('input[name="priority"]:checked').value;
+      const notes    = document.getElementById('notesInput').value;
+      const newId    = Math.max(...MOCK.requests.map(r => r.id)) + 1;
+      const items    = Object.entries(quantities).map(([id]) => MOCK.inventory.find(i => String(i.id)===id).name);
+
+      // Deduct stock
+      Object.entries(quantities).forEach(([id, qty]) => {
+        const item = MOCK.inventory.find(i => String(i.id)===id);
+        item.current_stock -= qty;
+      });
+
+      MOCK.requests.unshift({
+        id: newId, requester: 'nurse.sara@hospital.com', department: 'General Ward',
+        priority, status: 'Requested', submitted_at: new Date().toLocaleString('en-GB').replace(',',''),
+        items, notes
+      });
+
+      successEl.textContent = `✓ Request REQ-${String(newId).padStart(4,'0')} submitted and inventory updated.`;
+      successEl.style.display = '';
+      setTimeout(() => { location.href = 'nurse-dashboard.html'; }, 1200);
+    });
+
+    document.addEventListener('DOMContentLoaded', renderInstruments);
+  </script> -->
+</body>
+</html>
