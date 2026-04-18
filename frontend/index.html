@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hospital Management System - CSSD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -24,29 +24,27 @@
 
     <main class="main-content">
       <div class="container-wrapper">
-        
+
         <div class="welcome-section">
           <div class="app-icon">
-            <i data-lucide="activity" style="width: 36px; height: 36px;"></i>
+            <i data-lucide="activity" style="width:36px;height:36px;"></i>
           </div>
           <h2 class="welcome-title">Welcome to CSSD Management</h2>
           <p class="welcome-subtitle">Please select your role to continue</p>
         </div>
 
         <div class="role-cards">
-          
-          <a href="nurse-login.html" class="role-card">
+
+          <!-- PROJ-12: Nurse Login -->
+          <a href="pages/nurse-login.html" class="role-card">
             <div class="card-header">
               <div class="card-icon teal">
-                <i data-lucide="stethoscope" style="width: 28px; height: 28px;"></i>
+                <i data-lucide="stethoscope" style="width:28px;height:28px;"></i>
               </div>
               <i data-lucide="arrow-right" class="card-arrow"></i>
             </div>
             <h3 class="card-title">Nurse Portal</h3>
-            <p class="card-desc">
-              Submit instrument requests, track status, and manage
-              urgent requests for patient care.
-            </p>
+            <p class="card-desc">Submit instrument requests, track status, and manage urgent requests for patient care.</p>
             <ul class="card-features teal">
               <li>Create instrument requests</li>
               <li>Track request status</li>
@@ -54,18 +52,16 @@
             </ul>
           </a>
 
-          <a href="staff-login.html" class="role-card">
+          <!-- PROJ-11: CSSD Staff Login -->
+          <a href="pages/staff-login.html" class="role-card">
             <div class="card-header">
               <div class="card-icon blue">
-                <i data-lucide="shield" style="width: 28px; height: 28px;"></i>
+                <i data-lucide="shield" style="width:28px;height:28px;"></i>
               </div>
               <i data-lucide="arrow-right" class="card-arrow"></i>
             </div>
             <h3 class="card-title">CSSD Staff Portal</h3>
-            <p class="card-desc">
-              Process requests, update instrument status, manage
-              inventory, and track workflow stages.
-            </p>
+            <p class="card-desc">Process requests, update instrument status, manage inventory, and track workflow stages.</p>
             <ul class="card-features blue">
               <li>Process instrument requests</li>
               <li>Update workflow status</li>
@@ -79,9 +75,7 @@
           <i data-lucide="shield-alert" class="security-icon"></i>
           <div class="security-content">
             <h4>Security Notice</h4>
-            <p>
-              This system contains confidential patient and medical information. Access is restricted to authorized hospital personnel only. Unauthorized access is prohibited and will be prosecuted.
-            </p>
+            <p>This system contains confidential patient and medical information. Access is restricted to authorized hospital personnel only. Unauthorized access is prohibited and will be prosecuted.</p>
           </div>
         </div>
 
@@ -93,6 +87,7 @@
     </footer>
   </div>
 
-  <script src="script.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
