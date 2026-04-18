@@ -6,7 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db.models import F, Q
 from django.utils import timezone
 
-from .forms import EmailLoginForm, SterilizationBatchForm
+from .forms import EmailLoginForm, SterilizationBatchForm , InventoryItemForm
 from .decorators import cssd_staff_required, admin_required, hospital_admin_required
 from .models import (
     InstrumentRequest, RequestItem, InventoryItem,
@@ -45,7 +45,7 @@ def home(request):
     return render(request, 'index.html')
 
 
-def logout_view(request):
+def logout_view(request):   
     logout(request)
     return redirect('login')
 
@@ -54,7 +54,8 @@ def logout_view(request):
 def dashboard_router(request):
     role = request.user.role
     if role == 'System Administrator':
-        return redirect('/admin/')
+        # Change this from redirect('/admin/') to your custom admin dashboard
+        return redirect('admin_inventory_create') 
     elif role in ['CSSD Technician', 'Hospital Administrator']:
         return redirect('cssd_dashboard')
     elif role == 'Department Nurse':
@@ -384,3 +385,17 @@ def hospital_audit(request):
             Q(items__inventory_item__name__icontains=query)
         ).distinct().order_by('-submitted_at')
     return render(request, 'hospital-audit.html', {'results': results, 'query': query})
+
+
+@login_required
+@admin_required
+def admin_inventory_create(request):
+    if request.method == 'POST':
+        form = InventoryItemForm(request.POST)
+        if form.is_valid():
+            item = form.save()
+            messages.success(request, f"Instrument '{item.name}' registered successfully.")
+            return redirect('cssd_inventory_alerts') # Or your inventory list
+    else:
+        form = InventoryItemForm()
+    return render(request, 'admin-inventory-create.html', {'form': form})

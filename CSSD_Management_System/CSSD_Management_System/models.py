@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-
+from datetime import timedelta
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -81,6 +81,11 @@ class InventoryItem(models.Model):
     category = models.CharField(max_length=100)
     current_stock = models.IntegerField(default=0)
     min_threshold = models.IntegerField(default=10)
+    status = models.CharField(
+        max_length=20, 
+        default='Unassigned',
+        choices=[('Unassigned', 'Unassigned'), ('Assigned', 'Assigned')]
+    )
 
     @property
     def status(self):
@@ -140,23 +145,25 @@ class InstrumentRequest(models.Model):
         return f"REQ-{self.id:04d} - {self.status}"
 
     def get_eta(self):
-        """
-        Estimate completion time based on current status.
-        Each remaining step is ~30 minutes.
-        """
-        steps_remaining = {
-            'Requested': 5,
-            'Collected': 4,
-            'Cleaned': 3,
-            'Sterilized': 2,
-            'Packed': 1,
-            'Delivered': 0,
+        """Calculates ETA based on current status and average processing times."""
+        # Define average durations in minutes for each remaining step
+        durations = {
+            'Requested': 120,  # 2 hours total
+            'Collected': 90,   # 1.5 hours remaining
+            'Cleaned': 60,     # 1 hour remaining
+            'Sterilized': 30,  # 30 mins remaining (packing/delivery)
+            'Packed': 15,      # 15 mins remaining
+            'Delivered': 0
         }
-        remaining = steps_remaining.get(self.status, 0)
-        if remaining == 0:
-            return None
-        eta = timezone.now() + timezone.timedelta(minutes=remaining * 30)
-        return eta
+        
+        if self.status == 'Delivered':
+            return "Ready"
+        remaining_minutes = durations.get(self.status, 0)
+        # Use the current time or last update time as a base
+        eta_time = timezone.now() + timedelta(minutes=remaining_minutes)
+
+        
+        return f"Ready by ~{eta_time.strftime('%I:%M %p')}"
 
 class RequestItem(models.Model):
     request = models.ForeignKey(InstrumentRequest, on_delete=models.CASCADE, related_name='items')

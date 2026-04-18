@@ -30,4 +30,5 @@ urlpatterns = [
     # Hospital Admin
     path('dashboard/hospital/report/', views.hospital_report, name='hospital_report'),
     path('dashboard/hospital/audit/', views.hospital_audit, name='hospital_audit'),
+    path('dashboard/admin/inventory/create/', views.admin_inventory_create, name='admin_inventory_create'),
 ]

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils.translation import gettext_lazy as _
-from .models import SterilizationBatch
+from .models import SterilizationBatch , InventoryItem
 
 class EmailLoginForm(AuthenticationForm):
     username = forms.EmailField(
@@ -48,3 +48,16 @@ class SterilizationBatchForm(forms.ModelForm):
         if duration <= 0:
             raise forms.ValidationError('Cycle duration must be greater than 0.')
         return duration
+    
+
+class InventoryItemForm(forms.ModelForm):
+    class Meta:
+        model = InventoryItem
+        fields = ['name', 'category', 'current_stock', 'min_threshold']
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        # This handles the "duplicate error message" requirement
+        if InventoryItem.objects.filter(name__iexact=name).exists():
+            raise forms.ValidationError("An instrument set with this name already exists.")
+        return name

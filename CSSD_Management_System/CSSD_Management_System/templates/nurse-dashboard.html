@@ -19,7 +19,6 @@
         </div>
       </div>
       <div class="nav-actions">
-        <!-- Notification Bell -->
         {% if notif_count > 0 %}
         <a href="{% url 'nurse_mark_notifications_read' %}" class="icon-btn notification-btn" title="{{ notif_count }} new notifications">
           <i data-lucide="bell"></i>
@@ -38,7 +37,6 @@
     <main class="dashboard-main">
       <div class="dashboard-container">
 
-        <!-- Notifications panel -->
         {% if notifications %}
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem;margin-bottom:1rem;">
           <strong style="color:#16a34a;font-size:.85rem;">🔔 New Updates</strong>
@@ -82,7 +80,6 @@
           </div>
         </div>
 
-        <!-- Active requests only (sorted newest first by view) -->
         <div class="requests-list">
           {% for req in requests %}
           <a href="{% url 'nurse_request_detail' req.id %}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
@@ -103,10 +100,20 @@
                 </div>
               </div>
             </div>
-            <div class="req-footer">
-              <span class="submit-time"><i data-lucide="clock" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> Submitted: {{ req.submitted_at|date:'Y-m-d H:i' }}</span>
+            
+            <div class="req-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
+              <span class="submit-time">
+                <i data-lucide="clock" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> 
+                Submitted: {{ req.submitted_at|date:'H:i' }}
+              </span>
+              
               {% with eta=req.get_eta %}
-              {% if eta %}<span class="submit-time" style="margin-left:auto;color:#0d9488;">Ready by ~{{ eta|date:'g:i A' }}</span>{% endif %}
+                {% if eta %}
+                  <span class="submit-time" style="margin-left:auto;color:#0d9488;font-weight:600;">
+                    <i data-lucide="timer" style="width:14px;height:14px;vertical-align:middle;margin-right:2px;"></i>
+                    {{ eta }}
+                  </span>
+                {% endif %}
               {% endwith %}
             </div>
           </a>
@@ -121,6 +128,7 @@
       </div>
     </main>
   </div>
+  <script>lucide.createIcons();</script>
   <script src="{% static 'script.js' %}"></script>
 </body>
 </html>
