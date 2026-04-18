@@ -52,19 +52,19 @@
         <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Total Requests</span><h3 class="stat-value" id="statTotal">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Total Requests</span><h3 class="stat-value" id="statTotal">{{total}}</h3></div>
             <i data-lucide="package" class="stat-icon blue"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">In Progress</span><h3 class="stat-value" id="statInProgress">—</h3></div>
+            <div class="stat-info"><span class="stat-label">In Progress</span><h3 class="stat-value" id="statInProgress">{{in_progress}}</h3></div>
             <i data-lucide="clock" class="stat-icon orange"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Urgent</span><h3 class="stat-value" id="statUrgent">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Urgent</span><h3 class="stat-value" id="statUrgent">{{urgent}}</h3></div>
             <i data-lucide="alert-circle" class="stat-icon red"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Delivered</span><h3 class="stat-value" id="statDelivered">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Delivered</span><h3 class="stat-value" id="statDelivered">{{delivered}}</h3></div>
             <i data-lucide="check-circle-2" class="stat-icon green"></i>
           </div>
         </div>
@@ -78,8 +78,55 @@
         </div>
 
         <!-- Requests list -->
-        <div class="requests-list" id="requestsList"></div>
+        <div class="requests-list" id="requestsList">
 
+          
+            {% if requests %}
+              {% for req in requests %}
+                {% if req.status != "Delivered" %}
+                <a href="#" class="request-card" style="text-decoration:none;color:inherit;display:block;">
+                  
+                  <div class="req-header">
+                    <div class="req-title-group">
+                      <h4 class="req-id">REQ-{{ req.id|stringformat:"04d" }}</h4>
+
+                      {% if req.priority == "Urgent" %}
+                        <span class="pill pill-urgent">Urgent</span>
+                      {% else %}
+                        <span class="pill pill-normal">Normal</span>
+                      {% endif %}
+                    </div>
+
+                    <span class="pill">{{ req.status }}</span>
+                  </div>
+
+                  <div class="req-body">
+                    <p class="req-ward">
+                      {{ req.department }}
+                    </p>
+
+                    <div class="req-instruments">
+                      <span class="instruments-label">Instruments:</span>
+                      <div class="instruments-tags">
+                        {% for item in req.instruments %}
+                          <span class="tag-instrument">{{item}}</span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="req-footer">
+                    <span class="submit-time">
+                      {{ req.created_at }}
+                    </span>
+                  </div>
+
+                </a>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <p>No requests found.</p>
+            {% endif %}
       </div>
     </main>
   </div>

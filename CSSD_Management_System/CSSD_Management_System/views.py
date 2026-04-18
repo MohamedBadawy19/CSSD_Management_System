@@ -55,8 +55,43 @@ def dashboard_router(request):
 
 @login_required
 def nurse_dashboard(request):
+
+    final_requests = []
+
+    requests = InstrumentRequest.objects.filter(requester = request.user)
     
-    return render(request , 'nurse-dashboard.html' )
+    for request in requests:
+        instruments = RequestItem.objects.filter(request = request)
+        priority = request.priority
+        status = request.status
+        department = request.department
+        notes = request.notes
+        id = request.id
+        request_dict = {
+            'id' : id,
+            'instruments' : instruments,
+            'priority' : priority,
+            'status' : status,
+            'department' : department,
+            'notes' : notes,
+            
+        }
+        final_requests.append(request_dict)
+
+    total = len(requests)
+    in_progress = len(requests.filter(status__in=['Collected','Cleaned','Sterilized','Packed']))
+    urgent = len(requests.filter(priority='Urgent'))
+    delivered = len(requests.filter(priority='Delivered'))
+
+    context = {
+        'requests': final_requests,
+        'total': total,
+        'in_progress': in_progress,
+        'urgent': urgent,
+        'delivered': delivered,
+    }
+
+    return render(request , 'nurse-dashboard.html'  , context)
 
 def get_instruments():
     instruments = []
