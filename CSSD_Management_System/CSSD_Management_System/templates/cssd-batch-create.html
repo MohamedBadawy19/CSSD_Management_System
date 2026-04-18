@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Sterilization Batch</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'cssd_batch_list' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title"><h2>New Sterilization Batch</h2><p>Log batch details</p></div>
+      </div>
+    </nav>
+
+    <main class="dashboard-main form-main">
+      <div class="container-center form-container">
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#b91c1c;">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <!-- Operator auto-filled (read-only display) -->
+          <div class="form-section">
+            <label class="form-label">OPERATOR (AUTO-ASSIGNED)</label>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.75rem 1rem;font-size:.875rem;color:#374151;display:flex;align-items:center;gap:.5rem;">
+              <i data-lucide="user" style="width:16px;height:16px;color:#64748b;"></i>
+              <strong>{{ request.user.email }}</strong>
+              <span style="color:#94a3b8;font-size:.8rem;">— {{ request.user.role }}</span>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="id_temperature">TEMPERATURE (°C) <span style="color:#ef4444;">*</span></label>
+            {{ form.temperature }}
+            {% if form.temperature.errors %}
+            <div style="color:#ef4444;font-size:.8rem;margin-top:.35rem;">{{ form.temperature.errors.0 }}</div>
+            {% endif %}
+            <p style="font-size:.75rem;color:#94a3b8;margin-top:.35rem;">Minimum required: 121°C for compliance</p>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="id_cycle_duration">CYCLE DURATION (minutes) <span style="color:#ef4444;">*</span></label>
+            {{ form.cycle_duration }}
+            {% if form.cycle_duration.errors %}
+            <div style="color:#ef4444;font-size:.8rem;margin-top:.35rem;">{{ form.cycle_duration.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Read-only notice -->
+          <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:#92400e;display:flex;gap:.5rem;align-items:flex-start;">
+            <i data-lucide="lock" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;"></i>
+            <span>Once submitted, temperature and cycle duration are <strong>read-only</strong> and cannot be edited for compliance reasons.</span>
+          </div>
+
+          <div class="form-actions" style="margin-top:1.5rem;">
+            <button type="submit" class="btn-submit active">
+              <i data-lucide="flask-conical"></i> Create Batch
+            </button>
+            <a href="{% url 'cssd_batch_list' %}" class="btn-outline">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

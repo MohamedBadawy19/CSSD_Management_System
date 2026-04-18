@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -19,7 +20,6 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class CustomUser(AbstractUser):
-    # Roles as constants
     ROLE_CHOICES = [
         ('System Administrator', 'System Administrator'),
         ('CSSD Technician', 'CSSD Technician'),
@@ -27,10 +27,10 @@ class CustomUser(AbstractUser):
         ('Hospital Administrator', 'Hospital Administrator'),
     ]
 
-    username = None  # Remove username field
+    username = None
     email = models.EmailField(_('email address'), unique=True)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
-    department = models.CharField(max_length=100)
+    department = models.CharField(max_length=100, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -51,7 +51,7 @@ class InstrumentSet(models.Model):
         ('Delivered', 'Delivered'),
     ]
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     type = models.CharField(max_length=100)
     quantity = models.IntegerField()
     state = models.CharField(max_length=50, choices=STATE_CHOICES, default='Unassigned')
@@ -62,14 +62,19 @@ class InstrumentSet(models.Model):
         return f"{self.name} ({self.state})"
 
 class SterilizationBatch(models.Model):
+    STATUS_CHOICES = [
+        ('In Progress', 'In Progress'),
+        ('Completed', 'Completed'),
+    ]
+
     operator = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     temperature = models.FloatField()
-    cycle_duration = models.FloatField()
-    status = models.CharField(max_length=50, default='In Progress')
+    cycle_duration = models.FloatField()  # in minutes
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='In Progress')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Batch {self.id} - {self.status}"
+        return f"Batch {self.id} - {self.status} (op: {self.operator.email})"
 
 class InventoryItem(models.Model):
     name = models.CharField(max_length=255)
@@ -84,10 +89,11 @@ class InventoryItem(models.Model):
         elif self.current_stock <= self.min_threshold:
             return 'Limited'
         return 'Available'
-    
+
     @property
     def percentage(self):
-        if self.min_threshold == 0: return 100
+        if self.min_threshold == 0:
+            return 100
         return min((self.current_stock / self.min_threshold) * 100, 100)
 
     def __str__(self):
@@ -112,7 +118,16 @@ class InstrumentRequest(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Requested')
     department = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
-    
+    last_operator = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='processed_requests'
+    )
+    # Link to sterilization batch (required before marking Sterilized)
+    batch = models.ForeignKey(SterilizationBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name='requests')
+
     # Timestamps for timeline
     submitted_at = models.DateTimeField(auto_now_add=True)
     collected_at = models.DateTimeField(null=True, blank=True)
@@ -124,6 +139,25 @@ class InstrumentRequest(models.Model):
     def __str__(self):
         return f"REQ-{self.id:04d} - {self.status}"
 
+    def get_eta(self):
+        """
+        Estimate completion time based on current status.
+        Each remaining step is ~30 minutes.
+        """
+        steps_remaining = {
+            'Requested': 5,
+            'Collected': 4,
+            'Cleaned': 3,
+            'Sterilized': 2,
+            'Packed': 1,
+            'Delivered': 0,
+        }
+        remaining = steps_remaining.get(self.status, 0)
+        if remaining == 0:
+            return None
+        eta = timezone.now() + timezone.timedelta(minutes=remaining * 30)
+        return eta
+
 class RequestItem(models.Model):
     request = models.ForeignKey(InstrumentRequest, on_delete=models.CASCADE, related_name='items')
     inventory_item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE)
@@ -131,3 +165,14 @@ class RequestItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.inventory_item.name}"
+
+class Notification(models.Model):
+    """Simple in-app notification for nurses when their request status changes."""
+    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
+    request = models.ForeignKey(InstrumentRequest, on_delete=models.CASCADE)
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notif for {self.recipient.email}: {self.message}"

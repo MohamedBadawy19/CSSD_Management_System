@@ -1,0 +1,69 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sterile Stock - Nurse Portal</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+    <nav class="dashboard-nav theme-dark-teal">
+      <div class="nav-brand">
+        <div class="nav-logo teal"><i data-lucide="package-check"></i></div>
+        <div class="nav-title"><h2>Sterile Stock</h2><p>Currently Packed &amp; Ready</p></div>
+      </div>
+      <div class="nav-actions">
+        <a href="{% url 'nurse_dashboard' %}" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+
+        <!-- Category filter -->
+        <div class="filters-bar" style="margin-bottom:1rem;">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:.8rem;color:#64748b;font-weight:600;">Filter by category:</span>
+            <a href="{% url 'nurse_sterile_stock' %}" class="toggle-btn {% if not selected_category %}active{% endif %}">All</a>
+            {% for cat in categories %}
+            <a href="{% url 'nurse_sterile_stock' %}?category={{ cat }}" class="toggle-btn {% if selected_category == cat %}active{% endif %}">{{ cat }}</a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="detail-card list-card">
+          <div class="card-header pb-border">
+            <h4>Available Sterile Instruments <span style="color:#0d9488;">({{ items|length }} items)</span></h4>
+          </div>
+          <div class="alert-list">
+            {% for item in items %}
+            <div class="alert-list-item">
+              <div class="ali-main">
+                <div class="ali-title-bar">
+                  <h4>{{ item.name }}</h4>
+                  <span class="pill" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;">Packed &amp; Ready</span>
+                </div>
+                <div class="ali-stats">
+                  <div class="ali-stat"><span class="as-label">Category</span><span class="as-val">{{ item.category }}</span></div>
+                  <div class="ali-stat"><span class="as-label">Stock</span><span class="as-val" style="color:#0d9488;">{{ item.current_stock }}</span></div>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;padding:3rem;color:#94a3b8;">
+              <i data-lucide="package-x" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
+              <p>No sterile instruments currently packed and ready.</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html> 

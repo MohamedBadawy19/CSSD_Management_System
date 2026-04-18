@@ -32,7 +32,19 @@ Sterilization_Batch_Schema = {
     
 }
 
+Request_Schema = {
+            'id' : {"datatype" : "string" , 'nullable' : False , 'primary_key' : True , 'server_default' : None},
+            'setid' : {"datatype" : "string" , 'nullable' : False , 'primary_key' : False , 'server_default' : None},
+            'requesetedBy' : {"datatype" : "string" , 'nullable' : False , 'primary_key' : False , 'server_default' : None},
+            'status' : {"datatype" : "string" , 'nullable' : False , 'primary_key' : False , 'server_default' : None},
+            'batchid' : {"datatype" : "string" , 'nullable' : False , 'primary_key' : False , 'server_default' : None},
+            'created_at': {'datatype' : "string" , "nullable" : False , "primary_key" : False , "server_default" : func.now()} ,
+            'estimatedCompletionTime' : {'datatype' : "integer" , "nullable" : False , "primary_key" : False , "server_default" : None} ,
+            'updatedAt' : {'datatype' : "string" , "nullable" : False , "primary_key" : False , "server_default" : func.now()} 
+}
+
 
 database.create_table('User' , User_Schema)
 database.create_table('InstrumentSet' , InstrumentSet_Schema)
 database.create_table('Sterilization_Batch' , Sterilization_Batch_Schema)
+database.create_table('Request_Schema' , Request_Schema)

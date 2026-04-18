@@ -32,6 +32,15 @@
     <!-- Main Content -->
     <main class="dashboard-main form-main">
       <div class="container-center form-container">
+        {% if messages %}
+            <div class="messages-container" style="margin-bottom: 1.5rem;">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}" style="padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c;">
+                        <strong>⚠️ Alert:</strong> {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         <form method="POST" action="{% url 'nurse_create_request' %}">
           {% csrf_token %}
           

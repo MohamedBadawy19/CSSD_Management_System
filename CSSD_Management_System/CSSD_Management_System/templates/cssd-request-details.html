@@ -11,7 +11,6 @@
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
-    <!-- Navbar -->
     <nav class="dashboard-nav theme-dark-blue">
       <div class="nav-brand">
         <a href="{% url 'cssd_dashboard' %}" class="btn-back-icon">
@@ -24,11 +23,9 @@
       </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="dashboard-main details-main">
       <div class="container-center">
         
-        <!-- Summary Card -->
         <div class="detail-card summary-card row-layout">
           <div>
             <h3>Request Summary</h3>
@@ -52,9 +49,7 @@
           </div>
         </div>
 
-        <!-- 2 Column Layout -->
         <div class="grid-2-col">
-          <!-- Col 1 -->
           <div class="detail-card instruments-card">
             <h3>Requested Instruments</h3>
             <ul class="instrument-checklist">
@@ -67,17 +62,25 @@
             </ul>
           </div>
 
-          <!-- Col 2 -->
           <div class="col-stack">
             <div class="detail-card assigned-card">
               <h3>Assigned Technician</h3>
-              <div class="technician-badge" style="background: #f1f5f9; color: #64748b;">
-                <div class="avatar" style="background: #cbd5e1;"><i data-lucide="user-x"></i></div>
-                <div>
-                  <strong>Unassigned</strong>
-                  <p>Pending staff assignment</p>
+              {% if req.last_operator %}
+                <div class="technician-badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
+                  <div class="avatar" style="background: #3b82f6; color: white;"><i data-lucide="user-check"></i></div>
+                  <div>
+                    <strong>{{ req.last_operator.email }}</strong>
+                    <p>Current Processing Operator</p>
+                  </div>
                 </div>
-              </div>
+              {% else %}
+                <div class="technician-badge" style="background: #f1f5f9; color: #64748b;">
+                  <div class="avatar" style="background: #cbd5e1;"><i data-lucide="user-x"></i></div>
+                  <div>
+                    <p><p>{{ req.last_operator.email|default:"Not yet processed" }}</p></p>
+                  </div>
+                </div>
+              {% endif %}
             </div>
 
             <div class="detail-card notes-card">
@@ -89,19 +92,16 @@
           </div>
         </div>
 
-        <!-- Horizontal Timeline Card -->
         <div class="detail-card ht-card">
           <h3>Processing Timeline</h3>
           <div class="horizontal-timeline">
-            <!-- Node 1 -->
-            <div class="ht-node step-collected {% if req.status == 'Requested' or req.status != 'Requested' %}completed{% endif %}">
+            <div class="ht-node step-collected {% if req.status != 'Requested' %}completed{% endif %}">
               <div class="node-circle">1</div>
               <p>Collected</p>
               {% if req.status == 'Collected' %}<span class="ht-current">Current</span>{% endif %}
             </div>
-            <div class="ht-line step-collected {% if req.status != 'Requested' and req.status != 'Collected' %}completed{% endif %}"></div>
+            <div class="ht-line step-collected {% if req.status in 'Cleaned,Sterilized,Packed,Delivered' %}completed{% endif %}"></div>
             
-            <!-- Node 2 -->
             <div class="ht-node step-cleaned {% if req.status in 'Cleaned,Sterilized,Packed,Delivered' %}completed{% endif %}">
               <div class="node-circle">2</div>
               <p>Cleaned</p>
@@ -109,7 +109,6 @@
             </div>
             <div class="ht-line step-cleaned {% if req.status in 'Sterilized,Packed,Delivered' %}completed{% endif %}"></div>
             
-            <!-- Node 3 -->
             <div class="ht-node step-sterilized {% if req.status in 'Sterilized,Packed,Delivered' %}completed{% endif %}">
               <div class="node-circle">3</div>
               <p>Sterilized</p>
@@ -117,7 +116,6 @@
             </div>
             <div class="ht-line step-sterilized {% if req.status in 'Packed,Delivered' %}completed{% endif %}"></div>
             
-            <!-- Node 4 -->
             <div class="ht-node step-packed {% if req.status in 'Packed,Delivered' %}completed{% endif %}">
               <div class="node-circle">4</div>
               <p>Packed</p>
@@ -125,12 +123,10 @@
             </div>
             <div class="ht-line step-packed {% if req.status == 'Delivered' %}completed{% endif %}"></div>
             
-            <!-- Node 5 -->
             <div class="ht-node step-delivered {% if req.status == 'Delivered' %}completed{% endif %}">
               <div class="node-circle">5</div>
               <p>Delivered</p>
             </div>
-            
           </div>
         </div>
 
@@ -139,8 +135,23 @@
             <a href="{% url 'cssd_update_request_status' req.id 'Collected' %}" class="btn-primary flex-1" style="text-decoration:none;"><i data-lucide="check-circle-2"></i> Approve & Start Processing</a>
           {% elif req.status == 'Collected' %}
             <a href="{% url 'cssd_update_request_status' req.id 'Cleaned' %}" class="btn-primary flex-1" style="text-decoration:none;"><i data-lucide="check-circle-2"></i> Mark as Cleaned</a>
+          
           {% elif req.status == 'Cleaned' %}
-            <a href="{% url 'cssd_update_request_status' req.id 'Sterilized' %}" class="btn-primary flex-1" style="text-decoration:none;"><i data-lucide="check-circle-2"></i> Mark as Sterilized</a>
+            <form method="GET" action="{% url 'cssd_update_request_status' req.id 'Sterilized' %}" style="display:flex; gap:.75rem; flex:2; align-items:center;">
+              <select name="batch_id" class="form-input" style="flex:1; border:1px solid #cbd5e1; padding:0.5rem;" required>
+                <option value="">-- Select Sterilization Batch --</option>
+                {% for b in batches %}
+                  <option value="{{ b.id }}">Batch #{{ b.id }} ({{ b.temperature }}°C - {{ b.status }})</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn-primary" style="white-space:nowrap; display:flex; align-items:center; gap:0.5rem;">
+                <i data-lucide="check-circle-2"></i> Mark as Sterilized
+              </button>
+            </form>
+            <a href="{% url 'cssd_batch_create' %}" class="btn-outline" style="text-decoration:none;" title="Create new batch">
+              <i data-lucide="plus"></i>
+            </a>
+
           {% elif req.status == 'Sterilized' %}
             <a href="{% url 'cssd_update_request_status' req.id 'Packed' %}" class="btn-primary flex-1" style="text-decoration:none;"><i data-lucide="check-circle-2"></i> Mark as Packed</a>
           {% elif req.status == 'Packed' %}

@@ -2,134 +2,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSSD Dashboard</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
-    <!-- Navbar -->
     <nav class="dashboard-nav theme-dark-blue">
       <div class="nav-brand">
-        <div class="nav-logo blue">
-          <i data-lucide="activity"></i>
-        </div>
-        <div class="nav-title">
-          <h2>CSSD Dashboard</h2>
-          <p>Central Sterile Supply</p>
-        </div>
+        <div class="nav-logo blue"><i data-lucide="activity"></i></div>
+        <div class="nav-title"><h2>CSSD Dashboard</h2><p>Central Sterile Supply</p></div>
       </div>
       <div class="nav-actions">
-        <button class="icon-btn notification-btn" aria-label="Notifications">
-          <i data-lucide="bell"></i>
-          <span class="notification-badge">4</span>
-        </button>
-        <div class="user-profile">
-          <div class="user-info-text">
-            <strong>{{ staff_name }}</strong>
-            <span>{{ staff_role }}</span>
-          </div>
-          <div class="user-avatar">
-            <i data-lucide="user"></i>
-          </div>
-        </div>
-        <a href="{% url 'logout' %}" class="btn-logout icon-only">
-          <i data-lucide="log-out"></i>
+        <a href="{% url 'cssd_batch_list' %}" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">
+          <i data-lucide="flask-conical"></i> Batches
         </a>
+        <div class="user-profile">
+          <div class="user-info-text"><strong>{{ staff_name }}</strong><span>{{ staff_role }}</span></div>
+          <div class="user-avatar"><i data-lucide="user"></i></div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
       </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="dashboard-main">
       <div class="dashboard-container">
-        
-        <!-- Stats Row -->
+
         <div class="cssd-stats-grid">
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Pending Requests</span>
-              <i data-lucide="clock" class="stat-icon-small orange"></i>
-            </div>
+          <!-- Clicking pending goes to filtered pending-only view -->
+          <a href="{% url 'cssd_dashboard' %}?filter=pending" class="stat-card" style="text-decoration:none;display:block;">
+            <div class="stat-header"><span class="stat-label">Pending Requests</span><i data-lucide="clock" class="stat-icon-small orange"></i></div>
             <h3 class="stat-value">{{ stats.pending }}</h3>
-            <p class="stat-desc">Awaiting processing</p>
-          </div>
+            <p class="stat-desc">Click to view pending only</p>
+          </a>
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">In Progress</span>
-              <i data-lucide="package" class="stat-icon-small blue"></i>
-            </div>
+            <div class="stat-header"><span class="stat-label">In Progress</span><i data-lucide="package" class="stat-icon-small blue"></i></div>
             <h3 class="stat-value">{{ stats.in_progress }}</h3>
             <p class="stat-desc">Currently processing</p>
           </div>
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Completed Today</span>
-              <i data-lucide="check-circle-2" class="stat-icon-small green"></i>
-            </div>
+            <div class="stat-header"><span class="stat-label">Completed</span><i data-lucide="check-circle-2" class="stat-icon-small green"></i></div>
             <h3 class="stat-value">{{ stats.completed }}</h3>
             <p class="stat-desc">Successfully delivered</p>
           </div>
-          <!-- Critical Alerts Stat -->
-          <a href="{% url 'cssd_inventory_alerts' %}" class="stat-card alert-stat" style="text-decoration: none; display: flex;">
-            <div class="stat-icon-wrapper">
-              <i data-lucide="alert-triangle"></i>
-            </div>
-            <div class="stat-info">
-              <h3>Critical Alerts</h3>
-              <span class="stat-number">{{ stats.alerts }}</span>
-            </div>
+          <a href="{% url 'cssd_inventory_alerts' %}" class="stat-card alert-stat" style="text-decoration:none;display:flex;">
+            <div class="stat-icon-wrapper"><i data-lucide="alert-triangle"></i></div>
+            <div class="stat-info"><h3>Shortage Alerts</h3><span class="stat-number">{{ stats.alerts }}</span></div>
           </a>
         </div>
 
-        <div class="last-updated">
-          Last updated: {{ last_updated }}
+        {% if show_pending_only %}
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.6rem 1rem;font-size:.8rem;color:#92400e;display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;">
+          <i data-lucide="filter" style="width:14px;height:14px;"></i>
+          Showing pending requests only. <a href="{% url 'cssd_dashboard' %}" style="color:#2563eb;margin-left:.25rem;">Clear filter</a>
         </div>
+        {% endif %}
 
-        <!-- Filters -->
         <div class="cssd-filters-bar">
           <div class="search-input-wrapper expand">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search by request ID or nurse name...">
-          </div>
-          <div class="priority-toggles">
-            <span class="toggle-label">Priority:</span>
-            <button class="toggle-btn active">All</button>
-            <button class="toggle-btn">Normal</button>
-            <button class="toggle-btn">Urgent</button>
+            <input type="text" class="search-input" placeholder="Search by request ID or nurse...">
           </div>
         </div>
 
-        <!-- Incoming Requests List -->
         <div class="cssd-requests-panel">
-          <div class="panel-header">
-            <h3>Incoming Requests</h3>
-            <button class="btn-text">Refresh</button>
-          </div>
+          <div class="panel-header"><h3>{% if show_pending_only %}Pending Requests{% else %}Incoming Requests{% endif %}</h3></div>
           <div class="cssd-list">
             {% for req in requests %}
-            <a href="{% url 'cssd_request_detail' req.id %}" class="cssd-list-item" style="text-decoration: none; color: inherit; display: flex;">
+            <a href="{% url 'cssd_request_detail' req.id %}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;">
               <div class="item-main">
                 <div class="item-title">
                   <span class="item-id">REQ-{{ req.id|stringformat:"04d" }}</span>
                   <span class="dot-separator">•</span>
-                  <span class="item-requester">{{ req.requester.email|default:"System" }}</span>
+                  <span class="item-requester">{{ req.requester.email }}</span>
                 </div>
-                <div class="item-subtitle">
-                  {% for item in req.items.all %}{{ item.inventory_item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </div>
+                <div class="item-subtitle">{% for item in req.items.all %}{{ item.inventory_item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
                 <div class="item-time">{{ req.submitted_at|date:'Y-m-d H:i' }}</div>
               </div>
               <div class="item-actions">
                 <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
-                {% if req.priority == 'Urgent' %}
-                <span class="pill pill-urgent">Urgent</span>
-                {% else %}
-                <span class="pill pill-normal">Normal</span>
-                {% endif %}
+                {% if req.priority == 'Urgent' %}<span class="pill pill-urgent">Urgent</span>{% else %}<span class="pill pill-normal">Normal</span>{% endif %}
               </div>
             </a>
+            {% empty %}
+            <div style="text-align:center;padding:2rem;color:#94a3b8;">No requests found.</div>
             {% endfor %}
           </div>
         </div>

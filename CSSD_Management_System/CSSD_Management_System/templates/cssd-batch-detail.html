@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Detail</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'cssd_batch_list' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title"><h2>Batch #{{ batch.id }}</h2><p>{{ batch.status }}</p></div>
+      </div>
+    </nav>
+    <main class="dashboard-main details-main">
+      <div class="container-center">
+
+        <div class="detail-card summary-card">
+          <h3>Batch Details</h3>
+          <div class="summary-grid" style="margin-top:1rem;">
+            <div class="sg-item"><i data-lucide="user"></i><div><span class="sg-label">Operator</span><span class="sg-value">{{ batch.operator.email }}</span></div></div>
+            <div class="sg-item"><i data-lucide="thermometer"></i><div><span class="sg-label">Temperature</span><span class="sg-value">{{ batch.temperature }}°C</span></div></div>
+            <div class="sg-item"><i data-lucide="timer"></i><div><span class="sg-label">Cycle Duration</span><span class="sg-value">{{ batch.cycle_duration }} minutes</span></div></div>
+            <div class="sg-item"><i data-lucide="activity"></i><div><span class="sg-label">Status</span><span class="sg-value">{{ batch.status }}</span></div></div>
+            <div class="sg-item"><i data-lucide="calendar"></i><div><span class="sg-label">Created</span><span class="sg-value">{{ batch.created_at|date:'M j, Y — g:i A' }}</span></div></div>
+          </div>
+          <!-- Read-only notice -->
+          <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:#92400e;display:flex;gap:.5rem;margin-top:1rem;">
+            <i data-lucide="lock" style="width:16px;height:16px;flex-shrink:0;"></i>
+            <span>Batch records are <strong>read-only</strong>. Temperature and duration cannot be edited after submission.</span>
+          </div>
+        </div>
+
+        <div class="detail-card list-card">
+          <div class="card-header pb-border"><h4>Linked Requests</h4></div>
+          <div class="cssd-list">
+            {% for req in linked_requests %}
+            <a href="{% url 'cssd_request_detail' req.id %}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;">
+              <div class="item-main">
+                <div class="item-title"><span class="item-id">REQ-{{ req.id|stringformat:"04d" }}</span></div>
+                <div class="item-subtitle">{{ req.requester.email }}</div>
+              </div>
+              <div class="item-actions">
+                <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p style="padding:1rem;color:#94a3b8;font-size:.875rem;">No requests linked to this batch yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
