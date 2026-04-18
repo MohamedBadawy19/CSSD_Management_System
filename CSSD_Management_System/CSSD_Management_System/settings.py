@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
     'CSSD_Management_System'
 ]
 
@@ -128,3 +130,12 @@ LOGOUT_REDIRECT_URL = 'login'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'CSSD_Management_System', 'static'),
 ]
+
+# DRF & JWT Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+}
