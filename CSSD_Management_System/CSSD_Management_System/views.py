@@ -1,9 +1,8 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import  login, logout
 from django.contrib.auth.decorators import login_required
 from .forms import EmailLoginForm
-from .decorators import cssd_staff_required
-from django.http import HttpResponse
+from django.http import HttpResponse , HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from .models import InstrumentSet , RequestItem , InstrumentRequest , InventoryItem
 import datetime 
@@ -15,9 +14,11 @@ def login_view(request):
 
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
+        print(form.is_valid())
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            
             return redirect('dashboard_router')
     else:
         form = EmailLoginForm()
@@ -27,11 +28,14 @@ def login_view(request):
 
 def home(request):
     # Instead of a redirect, render your selection page
+    if request.user.is_authenticated:
+        return redirect('dashboard_router')
     return render(request, 'index.html')
 
 def logout_view(request):
     logout(request)
     return redirect('login')
+
 
 @login_required
 def dashboard_router(request):
@@ -40,21 +44,15 @@ def dashboard_router(request):
     Detects the user’s role and routes them to their corresponding dashboard.
     """
     role = request.user.role
+    
     if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
-        return redirect('cssd_dashboard')
+        return render(request , 'cssd-dashboard.html')
     elif role == 'Department Nurse':
         return redirect('nurse_dashboard')
     else:
         return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
 
-@login_required
-@cssd_staff_required
-def cssd_dashboard(request):
-    """
-    Dashboard for CSSD Staff (Technicians, Admins, etc.)
-    Blocked for Nurses.
-    """
-    return HttpResponse(f"<h1>CSSD Staff Dashboard</h1><p>Welcome, {request.user.email} (Role: {request.user.role})</p><a href='/logout/'>Logout</a>")
+
 
 @login_required
 def nurse_dashboard(request):
@@ -152,14 +150,17 @@ def save_instrument_request(request):
 
 def nurse_request_details(request , request_id):
     
-    request = InstrumentRequest.objects.get(id = request_id)
-    status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
-    request_dict = {
-            'req' : request,
-            'status_order' : status,
-            'current_status_index' : status.index(request.status) ,
-            'items' :  RequestItem.objects.filter(request = request)
-        }
-    print(request_dict)
     
-    return render(request , 'nurse-request-details.html' , request_dict)
+    instrument_request = InstrumentRequest.objects.get(id = request_id)
+    if request.user == instrument_request.requester:
+
+        status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
+        request_dict = {
+                'req' : instrument_request,
+                'status_order' : status,
+                'current_status_index' : status.index(instrument_request.status) ,
+                'items' :  RequestItem.objects.filter(request = instrument_request)
+            }
+        return render(request , 'nurse-request-details.html' , request_dict)
+
+    return HttpResponseForbidden("Access Denined")
