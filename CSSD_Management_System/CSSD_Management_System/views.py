@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import  login, logout
 from django.contrib.auth.decorators import login_required
 from .forms import EmailLoginForm
-from django.http import HttpResponse
+from django.http import HttpResponse , HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from .models import InstrumentSet , RequestItem , InstrumentRequest , InventoryItem
 import datetime 
@@ -150,14 +150,17 @@ def save_instrument_request(request):
 
 def nurse_request_details(request , request_id):
     
-    request = InstrumentRequest.objects.get(id = request_id)
-    status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
-    request_dict = {
-            'req' : request,
-            'status_order' : status,
-            'current_status_index' : status.index(request.status) ,
-            'items' :  RequestItem.objects.filter(request = request)
-        }
-    print(request_dict)
     
-    return render(request , 'nurse-request-details.html' , request_dict)
+    instrument_request = InstrumentRequest.objects.get(id = request_id)
+    if request.user == instrument_request.requester:
+
+        status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
+        request_dict = {
+                'req' : instrument_request,
+                'status_order' : status,
+                'current_status_index' : status.index(instrument_request.status) ,
+                'items' :  RequestItem.objects.filter(request = instrument_request)
+            }
+        return render(request , 'nurse-request-details.html' , request_dict)
+
+    return HttpResponseForbidden("Access Denined")
