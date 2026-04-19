@@ -5,6 +5,7 @@ from .forms import EmailLoginForm
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import InstrumentSet , RequestItem , InstrumentRequest , InventoryItem
+import datetime 
 @csrf_exempt
 def login_view(request):
     # Determine which template to show based on a URL parameter
@@ -126,7 +127,8 @@ def save_instrument_request(request):
             requester = request.user,
             priority = priority,
             department = request.user.department,
-            notes = notes
+            notes = notes,
+            submitted_at = datetime.datetime.now()
         )
 
         for instrument in instruments:
@@ -144,3 +146,18 @@ def save_instrument_request(request):
             database_instrument.current_stock -= quantity
             database_instrument.save()
     return redirect('nurse_create_request')
+
+
+def nurse_request_details(request , request_id):
+    
+    request = InstrumentRequest.objects.get(id = request_id)
+    status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
+    request_dict = {
+            'req' : request,
+            'status_order' : status,
+            'current_status_index' : status.index(request.status) ,
+            'items' :  RequestItem.objects.filter(request = request)
+        }
+    print(request_dict)
+    
+    return render(request , 'nurse-request-details.html' , request_dict)
