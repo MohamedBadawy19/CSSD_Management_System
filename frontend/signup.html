@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - CSSD Management System</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* ── Role toggle ──────────────────────────────── */
+    .role-toggle-wrap {
+      display: flex;
+      gap: .75rem;
+      margin-bottom: 2rem;
+    }
+    .role-toggle-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .45rem;
+      padding: .9rem .5rem;
+      border-radius: .875rem;
+      border: 2px solid #e2e8f0;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all .25s ease;
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .role-toggle-btn .rt-icon {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: .6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .25s ease;
+      background: #e2e8f0;
+      color: #94a3b8;
+    }
+    /* Nurse active = teal */
+    .role-toggle-btn.active-nurse {
+      border-color: #0d9488;
+      background: #f0fdfa;
+      color: #0d9488;
+    }
+    .role-toggle-btn.active-nurse .rt-icon {
+      background: linear-gradient(135deg,#10b981,#0d9488);
+      color: #fff;
+    }
+    /* Tech active = blue */
+    .role-toggle-btn.active-tech {
+      border-color: #2563eb;
+      background: #eff6ff;
+      color: #2563eb;
+    }
+    .role-toggle-btn.active-tech .rt-icon {
+      background: linear-gradient(135deg,#3b82f6,#2563eb);
+      color: #fff;
+    }
+
+    /* ── Form grid ────────────────────────────────── */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1rem;
+    }
+    @media (max-width: 480px) {
+      .form-grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Password strength ────────────────────────── */
+    .strength-bar-wrap {
+      display: flex;
+      gap: .3rem;
+      margin-top: .4rem;
+    }
+    .strength-seg {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: #e2e8f0;
+      transition: background .3s;
+    }
+    .strength-label {
+      font-size: .72rem;
+      margin-top: .25rem;
+      color: #94a3b8;
+      min-height: 1rem;
+    }
+
+    /* ── Validation states ────────────────────────── */
+    .form-input.valid   { border-color: var(--role-color, #10b981); background: var(--role-bg, #f0fdf4); }
+    .form-input.invalid { border-color: #ef4444; background: #fef2f2; }
+    .field-hint {
+      font-size: .72rem;
+      margin-top: .3rem;
+      min-height: .9rem;
+    }
+    .field-hint.ok  { color: var(--role-color, #10b981); }
+    .field-hint.err { color: #ef4444; }
+
+    /* ── Submit ───────────────────────────────────── */
+    .signup-card {
+      max-width: 520px !important;
+    }
+
+    /* ── Already have account link ────────────────── */
+    .login-link-row {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: .875rem;
+      color: #64748b;
+    }
+    .login-link-row a {
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .login-link-row a.teal-link { color: #0d9488; }
+    .login-link-row a.blue-link { color: #2563eb; }
+
+    /* ── Success overlay ──────────────────────────── */
+    .success-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.6);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    .success-overlay.show { display: flex; }
+    .success-box {
+      background: #fff;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+      animation: popIn .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(.85); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .success-icon-wrap {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Success overlay -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-box">
+      <div class="success-icon-wrap" id="successIcon"></div>
+      <h3 id="successTitle" style="font-size:1.3rem;font-weight:700;margin-bottom:.5rem;color:#0f172a;">Account Created!</h3>
+      <p id="successMsg" style="color:#64748b;font-size:.9rem;margin-bottom:1.5rem;"></p>
+      <a id="successBtn" href="index.html" class="btn-submit blue" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem;">
+        <i data-lucide="log-in" style="width:16px;height:16px;"></i> Go to Login
+      </a>
+    </div>
+  </div>
+
+  <!-- Page -->
+  <div class="page-wrapper" id="pageWrapper">
+    <header class="header" id="pageHeader">
+      <div class="header-content">
+        <div class="header-title">
+          <h1>CSSD Management System</h1>
+          <p>Create your account</p>
+        </div>
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>System Online</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="login-container-wrapper signup-card">
+
+        <a href="index.html" class="back-link">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+          Back to home
+        </a>
+
+        <div class="login-card">
+          <div class="login-header">
+            <div class="app-icon" id="headerIcon" style="background:linear-gradient(135deg,#10b981,#0d9488);">
+              <i data-lucide="user-plus" style="width:32px;height:32px;"></i>
+            </div>
+            <h2 class="login-title">Create Account</h2>
+            <p class="login-subtitle" id="headerSubtitle">Join the CSSD Management System</p>
+          </div>
+
+          <!-- ── Role Toggle ── -->
+          <div class="role-toggle-wrap">
+            <button type="button" class="role-toggle-btn active-nurse" id="btnNurse" onclick="setRole('nurse')">
+              <span class="rt-icon"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></span>
+              Nurse
+            </button>
+            <button type="button" class="role-toggle-btn" id="btnTech" onclick="setRole('tech')">
+              <span class="rt-icon"><i data-lucide="activity" style="width:18px;height:18px;"></i></span>
+              CSSD Technician
+            </button>
+          </div>
+
+          <!-- ── Form ── -->
+          <form id="signupForm" novalidate>
+
+            <!-- Username + Phone (2-col) -->
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <div class="input-wrapper">
+                  <i data-lucide="user" class="input-icon"></i>
+                  <input type="text" id="fUsername" class="form-input" placeholder="e.g. Mohamed Ahmed" autocomplete="name">
+                </div>
+                <div class="field-hint" id="hUsername"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <div class="input-wrapper">
+                  <i data-lucide="phone" class="input-icon"></i>
+                  <input type="tel" id="fPhone" class="form-input" placeholder="e.g. 01012345678" autocomplete="tel" inputmode="numeric">
+                </div>
+                <div class="field-hint" id="hPhone"></div>
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <div class="input-wrapper">
+                <i data-lucide="mail" class="input-icon"></i>
+                <input type="email" id="fEmail" class="form-input" placeholder="you@hospital.com" autocomplete="email">
+              </div>
+              <div class="field-hint" id="hEmail"></div>
+            </div>
+
+            <!-- National ID -->
+            <div class="form-group">
+              <label class="form-label">National ID</label>
+              <div class="input-wrapper">
+                <i data-lucide="id-card" class="input-icon"></i>
+                <input type="text" id="fNationalId" class="form-input" placeholder="14-digit national ID" maxlength="14" inputmode="numeric">
+              </div>
+              <div class="field-hint" id="hNationalId"></div>
+            </div>
+
+            <!-- Gender -->
+            <div class="form-group">
+              <label class="form-label">Gender</label>
+              <div class="input-wrapper">
+                <i data-lucide="users" class="input-icon"></i>
+                <select id="fGender" class="form-input" style="cursor:pointer;" onchange="setGender(this.value)">
+                  <option value="" disabled selected>Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field-hint" id="hGender"></div>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="input-wrapper">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input type="password" id="fPassword" class="form-input" placeholder="Create a strong password" autocomplete="new-password">
+                <button type="button" class="btn-toggle-password" onclick="togglePwd('fPassword','eyePass')">
+                  <i data-lucide="eye" id="eyePass"></i>
+                </button>
+              </div>
+              <!-- Strength bar -->
+              <div class="strength-bar-wrap">
+                <div class="strength-seg" id="s1"></div>
+                <div class="strength-seg" id="s2"></div>
+                <div class="strength-seg" id="s3"></div>
+                <div class="strength-seg" id="s4"></div>
+              </div>
+              <div class="strength-label" id="strengthLabel"></div>
+              <!-- Constraints checklist -->
+              <ul class="pw-rules" id="pwRules">
+                <li id="rule-len"  class="rule"><span class="rule-icon">○</span> At least 8 characters</li>
+                <li id="rule-upper"class="rule"><span class="rule-icon">○</span> At least one uppercase letter (A–Z)</li>
+                <li id="rule-num"  class="rule"><span class="rule-icon">○</span> At least one number (0–9)</li>
+                <li id="rule-spec" class="rule"><span class="rule-icon">○</span> At least one special character (!@#$…)</li>
+              </ul>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+              <label class="form-label">Confirm Password</label>
+              <div class="input-wrapper">
+                <i data-lucide="lock-keyhole" class="input-icon"></i>
+                <input type="password" id="fConfirm" class="form-input" placeholder="Repeat your password" autocomplete="new-password">
+                <button type="button" class="btn-toggle-password" onclick="togglePwd('fConfirm','eyeConfirm')">
+                  <i data-lucide="eye" id="eyeConfirm"></i>
+                </button>
+              </div>
+              <div class="field-hint" id="hConfirm"></div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn-submit teal" id="submitBtn">
+              <span id="btnText">Create Account</span>
+              <i data-lucide="user-plus" id="btnIcon" style="width:18px;height:18px;margin-left:6px;"></i>
+            </button>
+
+          </form>
+
+          <div class="login-link-row">
+            Already have an account?
+            <a href="pages/staff-login.html" id="loginLink" class="teal-link">Sign in here</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script>
+    let currentRole = 'nurse';
+
+    /* ── Role switching ────────────────────────────────────────── */
+    function setRole(role) {
+      currentRole = role;
+      const isNurse = role === 'nurse';
+
+      // buttons
+      document.getElementById('btnNurse').className = 'role-toggle-btn' + (isNurse ? ' active-nurse' : '');
+      document.getElementById('btnTech').className  = 'role-toggle-btn' + (!isNurse ? ' active-tech' : '');
+
+      // page theme
+      const wrapper = document.getElementById('pageWrapper');
+      wrapper.className = isNurse ? 'page-wrapper theme-teal' : 'page-wrapper theme-blue';
+
+      const header = document.getElementById('pageHeader');
+      header.className = isNurse ? 'header theme-teal' : 'header theme-blue';
+
+      // icon gradient
+      const icon = document.getElementById('headerIcon');
+      icon.style.background = isNurse
+        ? 'linear-gradient(135deg,#10b981,#0d9488)'
+        : 'linear-gradient(135deg,#3b82f6,#2563eb)';
+
+      // submit button colour
+      const btn = document.getElementById('submitBtn');
+      btn.className = isNurse ? 'btn-submit teal' : 'btn-submit blue';
+
+      // subtitle
+      document.getElementById('headerSubtitle').textContent = isNurse
+        ? 'Register as a Nurse to the portal'
+        : 'Register as a CSSD Technician';
+
+      // login link
+      const lnk = document.getElementById('loginLink');
+      lnk.href = isNurse ? 'pages/nurse-login.html' : 'pages/staff-login.html';
+      lnk.className = isNurse ? 'teal-link' : 'blue-link';
+
+      lucide.createIcons();
+    }
+
+    /* ── Gender selection ─────────────────────────────────────── */
+    let selectedGender = '';
+    function setGender(val) {
+      selectedGender = val;
+      const map = { male:'Male', female:'Female', other:'Other' };
+      const hint = document.getElementById('hGender');
+      hint.className = 'field-hint ok';
+      hint.textContent = '✓ ' + (map[val] || val) + ' selected';
+    }
+
+    /* ── Password show/hide ────────────────────────────────────── */
+    function togglePwd(inputId, iconId) {
+      const inp  = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      const show = inp.type === 'password';
+      inp.type   = show ? 'text' : 'password';
+      icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+      lucide.createIcons();
+    }
+
+    /* ── Password strength ─────────────────────────────────────── */
+    function calcStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8)  score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[0-9]/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return score;
+    }
+    const STRENGTH = [
+      { label: '',          colors: [] },
+      { label: 'Weak',      colors: ['#ef4444','#e2e8f0','#e2e8f0','#e2e8f0'] },
+      { label: 'Fair',      colors: ['#f97316','#f97316','#e2e8f0','#e2e8f0'] },
+      { label: 'Good',      colors: ['#eab308','#eab308','#eab308','#e2e8f0'] },
+      { label: 'Strong 💪', colors: ['#10b981','#10b981','#10b981','#10b981'] },
+    ];
+    function updateRules(pw) {
+      const rules = {
+        'rule-len':   pw.length >= 8,
+        'rule-upper': /[A-Z]/.test(pw),
+        'rule-num':   /[0-9]/.test(pw),
+        'rule-spec':  /[^A-Za-z0-9]/.test(pw),
+      };
+      Object.entries(rules).forEach(([id, met]) => {
+        const li   = document.getElementById(id);
+        const icon = li.querySelector('.rule-icon');
+        li.classList.toggle('rule-met',  met);
+        li.classList.toggle('rule-fail', !met && pw.length > 0);
+        icon.textContent = met ? '✓' : (pw.length > 0 ? '✗' : '○');
+      });
+    }
+    document.getElementById('fPassword').addEventListener('input', function() {
+      const s = calcStrength(this.value);
+      const info = STRENGTH[s] || STRENGTH[0];
+      ['s1','s2','s3','s4'].forEach((id,i) => {
+        document.getElementById(id).style.background = info.colors[i] || '#e2e8f0';
+      });
+      document.getElementById('strengthLabel').textContent = this.value ? info.label : '';
+      updateRules(this.value);
+      checkConfirm();
+    });
+
+    /* ── Field validation ──────────────────────────────────────── */
+    function setField(inputId, hintId, valid, msg) {
+      const inp  = document.getElementById(inputId);
+      const hint = document.getElementById(hintId);
+      inp.className  = 'form-input ' + (valid ? 'valid' : 'invalid');
+      hint.className = 'field-hint '  + (valid ? 'ok'    : 'err');
+      hint.textContent = msg;
+    }
+
+    function clearField(inputId, hintId) {
+      document.getElementById(inputId).className = 'form-input';
+      const h = document.getElementById(hintId);
+      h.className = 'field-hint'; h.textContent = '';
+    }
+
+    document.getElementById('fUsername').addEventListener('blur', function() {
+      if (!this.value) return clearField('fUsername','hUsername');
+      const ok = this.value.trim().length >= 2 && /^[a-zA-ZÀ-ɏ\s'-]+$/.test(this.value.trim());
+      setField('fUsername','hUsername', ok, ok ? '✓ Valid name' : 'Name must contain letters only, no numbers');
+    });
+    document.getElementById('fUsername').addEventListener('input', function() {
+      // Block digits in real-time
+      this.value = this.value.replace(/[0-9]/g, '');
+    });
+
+    document.getElementById('fPhone').addEventListener('input', function() {
+      // Numbers only - strip everything else instantly
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15);
+    });
+    document.getElementById('fPhone').addEventListener('blur', function() {
+      if (!this.value) return clearField('fPhone','hPhone');
+      const ok = this.value.length >= 7;
+      setField('fPhone','hPhone', ok, ok ? '✓ Valid number' : 'Enter a valid phone number (digits only)');
+    });
+
+    document.getElementById('fEmail').addEventListener('blur', function() {
+      if (!this.value) return clearField('fEmail','hEmail');
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
+      setField('fEmail','hEmail', ok, ok ? '✓ Valid email' : 'Enter a valid email address');
+    });
+
+    document.getElementById('fNationalId').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g,'').slice(0,14);
+    });
+    document.getElementById('fNationalId').addEventListener('blur', function() {
+      if (!this.value) return clearField('fNationalId','hNationalId');
+      const ok = this.value.length === 14;
+      setField('fNationalId','hNationalId', ok, ok ? '✓ Valid national ID' : 'Must be exactly 14 digits');
+    });
+
+    function checkConfirm() {
+      const pw  = document.getElementById('fPassword').value;
+      const cfm = document.getElementById('fConfirm').value;
+      if (!cfm) return clearField('fConfirm','hConfirm');
+      const ok = pw === cfm;
+      setField('fConfirm','hConfirm', ok, ok ? '✓ Passwords match' : 'Passwords do not match');
+    }
+    document.getElementById('fConfirm').addEventListener('input', checkConfirm);
+
+    /* ── Submit ────────────────────────────────────────────────── */
+    document.getElementById('signupForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const username  = document.getElementById('fUsername').value.trim();
+      const phone     = document.getElementById('fPhone').value.trim();
+      const email     = document.getElementById('fEmail').value.trim();
+      const natId     = document.getElementById('fNationalId').value.trim();
+      const password  = document.getElementById('fPassword').value;
+      const confirm   = document.getElementById('fConfirm').value;
+
+      // Trigger all validations
+      ['fUsername','fEmail','fPhone','fNationalId'].forEach(id => {
+        document.getElementById(id).dispatchEvent(new Event('blur'));
+      });
+      checkConfirm();
+
+      const errors = [
+        !username || username.length < 3,
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        !/^[\d\s\+\-]{7,15}$/.test(phone),
+        natId.length !== 14,
+        password.length < 6,
+        password !== confirm,
+      ];
+      if (errors.some(Boolean)) return;
+
+      // Loading state
+      const btn  = document.getElementById('submitBtn');
+      const txt  = document.getElementById('btnText');
+      const icon = document.getElementById('btnIcon');
+      btn.disabled = true;
+      icon.style.display = 'none';
+      const spinner = document.createElement('div');
+      spinner.className = 'spinner';
+      spinner.style.marginLeft = '8px';
+      btn.appendChild(spinner);
+      txt.textContent = 'Creating account…';
+
+      setTimeout(() => {
+        spinner.remove();
+        btn.disabled = false;
+        icon.style.display = '';
+        txt.textContent = 'Create Account';
+
+        // Show success
+        const isNurse = currentRole === 'nurse';
+        const overlay = document.getElementById('successOverlay');
+        const iconWrap = document.getElementById('successIcon');
+        iconWrap.style.background = isNurse
+          ? 'linear-gradient(135deg,#10b981,#0d9488)'
+          : 'linear-gradient(135deg,#3b82f6,#2563eb)';
+        iconWrap.innerHTML = `<i data-lucide="${isNurse ? 'stethoscope' : 'activity'}" style="width:28px;height:28px;color:white;"></i>`;
+        document.getElementById('successTitle').textContent = 'Account Created!';
+        document.getElementById('successMsg').textContent =
+          `Welcome, ${username}! Your ${isNurse ? 'Nurse' : 'CSSD Technician'} account is ready.`;
+        const goBtn = document.getElementById('successBtn');
+        goBtn.href = isNurse ? 'pages/nurse-login.html' : 'pages/staff-login.html';
+        goBtn.className = isNurse ? 'btn-submit teal' : 'btn-submit blue';
+        goBtn.style.cssText = 'text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem;';
+        overlay.classList.add('show');
+        lucide.createIcons();
+      }, 1500);
+    });
+
+    /* ── Init ──────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      setRole('nurse');
+    });
+  </script>
+</body>
+</html>
