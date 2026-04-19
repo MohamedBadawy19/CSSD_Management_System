@@ -1,0 +1,158 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Details - Nurse Portal</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+<!-- NAV -->
+<nav class="dashboard-nav theme-dark-teal">
+  <div class="nav-brand">
+    <div class="nav-logo teal"><i data-lucide="stethoscope"></i></div>
+    <div class="nav-title">
+      <h2>Request Details</h2>
+      <p>REQ-{{ req.id|stringformat:"04d" }}</p>
+    </div>
+  </div>
+
+  <div class="nav-actions">
+    <a href="{% url 'nurse_dashboard' %}" class="btn-back">
+      <i data-lucide="arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="dashboard-main details-main">
+  <div class="container-center">
+
+    <!-- SUMMARY -->
+    <div class="detail-card summary-card">
+      <div class="summary-header">
+        <h3>REQ-{{ req.id|stringformat:"04d" }}</h3>
+
+        {% if req.priority == "Urgent" %}
+          <span class="text-urgent">
+            <i data-lucide="alert-triangle"></i> Urgent Priority
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="summary-pills">
+        <span class="pill">{{ req.status }}</span>
+
+        {% if req.priority == "Urgent" %}
+          <span class="pill pill-urgent">Urgent</span>
+        {% else %}
+          <span class="pill pill-normal">Normal</span>
+        {% endif %}
+      </div>
+
+      <div class="summary-grid">
+        <div class="sg-item">
+          <i data-lucide="building"></i>
+          <div>
+            <span class="sg-label">Department</span>
+            <span class="sg-value">{{ req.department }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="user"></i>
+          <div>
+            <span class="sg-label">Requested By</span>
+            <span class="sg-value">{{ req.requester }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="calendar"></i>
+          <div>
+            <span class="sg-label">Submitted</span>
+            <span class="sg-value">{{ req.submitted_at }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="timer"></i>
+          <div>
+            <span class="sg-label">Estimated Delivery</span>
+            <span class="sg-value" style="color:#0d9488;font-weight:600;">
+              {{ eta }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="detail-card timeline-card">
+      <div class="card-header">
+        <i data-lucide="clock"></i>
+        <h4>Processing Timeline</h4>
+      </div>
+
+      <div class="vertical-timeline">
+        {% for status in status_order %}
+          <div class="vt-item">   
+          {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
+              completed
+            {% endif %} 
+          
+
+            {% if not forloop.last %}
+              <div class="vt-line"></div>
+            {% endif %}
+            
+            {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
+            <div class="vt-icon" style = "background-color : green">✔</div>
+            {% else %}
+            <div class="vt-icon" style = "background-color : red"><i data-lucide="x"></i></div>
+            {% endif %}
+
+            
+
+            <div class="vt-content">
+              <h5>{{ status }}</h5>
+              {% if forloop.counter0 <= current_status_index %}
+                <span>{{ req.submitted_at }}</span>
+              {% endif %}
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- INSTRUMENTS -->
+    <div class="detail-card instruments-card">
+      <h3>Requested Instruments</h3>
+
+      <ul class="instrument-checklist">
+        {% for item in items %}
+          <li>
+            <span>{{item}}</span>
+            <i data-lucide="check-circle-2" class="icon-green"></i>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+</main>
+
+  </div>
+  <script src="../static/mock-data.js"></script>
+  <script src="../static/script.js"></script>
+  <script>lucide.createIcons();</script>
+
+
+</body>
+</html>

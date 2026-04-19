@@ -84,7 +84,7 @@
             {% if requests %}
               {% for req in requests %}
                 {% if req.status != "Delivered" %}
-                <a href="#" class="request-card" style="text-decoration:none;color:inherit;display:block;">
+                <a href="/nurse_request_details/{{req.id}}/" class="request-card" style="text-decoration:none;color:inherit;display:block;">
                   
                   <div class="req-header">
                     <div class="req-title-group">

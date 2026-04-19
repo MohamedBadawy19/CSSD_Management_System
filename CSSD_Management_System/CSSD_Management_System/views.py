@@ -4,7 +4,10 @@ from django.contrib.auth.decorators import login_required
 from .forms import EmailLoginForm
 from .decorators import cssd_staff_required
 from django.http import HttpResponse
-
+from django.views.decorators.csrf import csrf_exempt
+from .models import InstrumentSet , RequestItem , InstrumentRequest , InventoryItem
+import datetime 
+@csrf_exempt
 def login_view(request):
     # Determine which template to show based on a URL parameter
     role_type = request.GET.get('role', 'staff')
@@ -55,11 +58,6 @@ def cssd_dashboard(request):
 
 @login_required
 def nurse_dashboard(request):
-<<<<<<< HEAD
-    """
-    Dashboard for Department Nurses.
-    """
-=======
 
     final_requests = []
 
@@ -97,5 +95,71 @@ def nurse_dashboard(request):
     }
 
     return render(request , 'nurse-dashboard.html'  , context)
->>>>>>> 0935c8e (add view pending requests count , view active requests in nurse dashboard)
 
+def get_instruments():
+    instruments = []
+    for instrument in InventoryItem.objects.all():
+        instrument_dict = {
+            'name' : instrument.name,
+            'category' : instrument.category,
+            'current_stock' : instrument.current_stock,
+            'min_threshold' : instrument.min_threshold,
+
+        }
+
+        instruments.append(instrument_dict)
+    return instruments 
+
+@login_required
+def nurse_create_request(request):
+    
+        
+    return render(request , 'nurse-create-request.html' , {'instruments' : get_instruments()})
+
+
+@csrf_exempt
+def save_instrument_request(request):
+    if request.method == 'POST':
+
+        instruments = request.POST.getlist('instruments')
+        priority = request.POST.get('priority')
+        notes = request.POST.get('notes')
+
+        new_request = InstrumentRequest.objects.create(
+            requester = request.user,
+            priority = priority,
+            department = request.user.department,
+            notes = notes,
+            submitted_at = datetime.datetime.now()
+        )
+
+        for instrument in instruments:
+            quantity = int(request.POST.get("quantity_" + instrument))
+            database_instrument = InventoryItem.objects.get(name = instrument)
+            
+            if quantity > database_instrument.current_stock:
+                return render(request , 'nurse-create-request.html' , {'instruments' : get_instruments() , 'warning': f'instrument {instrument} has current_stock : {database_instrument.current_stock}' })
+
+            RequestItem.objects.create(
+                request = new_request,
+                inventory_item = database_instrument,
+                quantity = quantity
+            )
+            database_instrument.current_stock -= quantity
+            database_instrument.save()
+    return redirect('nurse_create_request')
+
+
+def nurse_request_details(request , request_id):
+    
+    request = InstrumentRequest.objects.get(id = request_id)
+    status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
+    request_dict = {
+            'req' : request,
+            'status_order' : status,
+            'current_status_index' : status.index(request.status) ,
+            'items' :  RequestItem.objects.filter(request = request)
+        }
+    print(request_dict)
+    
+    return render(request , 'nurse-request-details.html' , request_dict)
