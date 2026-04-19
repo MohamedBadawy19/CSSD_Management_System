@@ -226,7 +226,7 @@
                 <label class="form-label">Full Name</label>
                 <div class="input-wrapper">
                   <i data-lucide="user" class="input-icon"></i>
-                  <input type="text" id="fUsername" class="form-input" placeholder="e.g. Mohamed Ahmed" autocomplete="name">
+                  <input type="text" id="fUsername" class="form-input" placeholder="e.g. Sara Ahmed" autocomplete="name">
                 </div>
                 <div class="field-hint" id="hUsername"></div>
               </div>
@@ -274,6 +274,49 @@
                 </select>
               </div>
               <div class="field-hint" id="hGender"></div>
+            </div>
+
+            <!-- ID Number + Hospital/CSSD Name (2-col) -->
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">ID Number</label>
+                <div class="input-wrapper">
+                  <i data-lucide="hash" class="input-icon"></i>
+                  <input type="text" id="fIdNumber" class="form-input" placeholder="Employee / Staff ID" inputmode="numeric" maxlength="20">
+                </div>
+                <div class="field-hint" id="hIdNumber"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" id="labelPlace">Name of Hospital</label>
+                <div class="input-wrapper">
+                  <i data-lucide="building-2" class="input-icon"></i>
+                  <input type="text" id="fPlace" class="form-input" placeholder="e.g. Cairo General Hospital">
+                </div>
+                <div class="field-hint" id="hPlace"></div>
+              </div>
+            </div>
+
+            <!-- Role / Degree -->
+            <div class="form-group">
+              <label class="form-label" id="labelRole">Role / Degree</label>
+              <div class="input-wrapper">
+                <i data-lucide="briefcase" class="input-icon"></i>
+                <select id="fRole" class="form-input" style="cursor:pointer;">
+                  <option value="" disabled selected>Select your role</option>
+                </select>
+              </div>
+              <div class="field-hint" id="hRole"></div>
+            </div>
+
+            <!-- Department (Nurse only) -->
+            <div class="form-group" id="deptGroup" style="display:none;">
+              <label class="form-label">Department</label>
+              <div class="input-wrapper">
+                <i data-lucide="layers" class="input-icon"></i>
+                <input type="text" id="fDepartment" class="form-input" placeholder="e.g. Emergency, ICU, Pediatrics">
+              </div>
+              <div class="field-hint" id="hDepartment"></div>
             </div>
 
             <!-- Password -->
@@ -337,14 +380,58 @@
   <script>
     let currentRole = 'nurse';
 
+    const ROLE_OPTIONS = {
+      nurse: [
+        { value: 'staff-nurse', text: 'Staff Nurse' },
+        { value: 'head-nurse', text: 'Head Nurse' },
+        { value: 'clinical-nurse', text: 'Clinical Nurse' },
+        { value: 'other', text: 'Other' },
+      ],
+      tech: [
+        {value:'cssd-manager', text:'CSSD Manager'},
+        { value: 'cssd-tech', text: 'CSSD Technician' },
+        { value: 'sterile-tech', text: 'Sterile Processing Tech' },
+        { value: 'instrument-tech', text: 'Instrument Processing Tech' },
+        { value: 'quality-tech', text: 'Quality Control Tech' },
+        { value: 'supervisor', text: 'CSSD Supervisor' },
+        { value: 'other', text: 'Other' },
+      ],
+    };
+
+    function populateRoleOptions(role) {
+      const select = document.getElementById('fRole');
+      select.innerHTML = '<option value="" disabled selected>Select your role</option>';
+      (ROLE_OPTIONS[role] || []).forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        select.appendChild(option);
+      });
+      clearField('fRole', 'hRole');
+    }
+
     /* ── Role switching ────────────────────────────────────────── */
     function setRole(role) {
       currentRole = role;
       const isNurse = role === 'nurse';
 
+      populateRoleOptions(role);
+
       // buttons
       document.getElementById('btnNurse').className = 'role-toggle-btn' + (isNurse ? ' active-nurse' : '');
       document.getElementById('btnTech').className  = 'role-toggle-btn' + (!isNurse ? ' active-tech' : '');
+
+      // department only for nurses
+      const deptGroup = document.getElementById('deptGroup');
+      deptGroup.style.display = isNurse ? '' : 'none';
+      if (!isNurse) {
+        document.getElementById('fDepartment').value = '';
+        clearField('fDepartment', 'hDepartment');
+      }
+
+      // contextual place label
+      document.getElementById('labelPlace').textContent = isNurse ? 'Name of Hospital' : 'Name of CSSD';
+      document.getElementById('fPlace').placeholder = isNurse ? 'e.g. Cairo General Hospital' : 'e.g. Cairo CSSD Unit';
 
       // page theme
       const wrapper = document.getElementById('pageWrapper');
@@ -486,6 +573,36 @@
       if (!this.value) return clearField('fNationalId','hNationalId');
       const ok = this.value.length === 14;
       setField('fNationalId','hNationalId', ok, ok ? '✓ Valid national ID' : 'Must be exactly 14 digits');
+    });
+
+    // ID Number: digits only
+    document.getElementById('fIdNumber').addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+    document.getElementById('fIdNumber').addEventListener('blur', function() {
+      if (!this.value) return clearField('fIdNumber','hIdNumber');
+      const ok = this.value.length >= 3;
+      setField('fIdNumber','hIdNumber', ok, ok ? '✓ Valid ID number' : 'Please enter a valid ID number');
+    });
+
+    // Hospital / CSSD Place name
+    document.getElementById('fPlace').addEventListener('blur', function() {
+      if (!this.value) return clearField('fPlace','hPlace');
+      const ok = this.value.trim().length >= 2;
+      setField('fPlace','hPlace', ok, ok ? '✓ Looks good' : 'Please enter a valid name');
+    });
+
+    // Role dropdown
+    document.getElementById('fRole').addEventListener('change', function() {
+      if (!this.value) return clearField('fRole','hRole');
+      setField('fRole','hRole', true, '✓ ' + this.value + ' selected');
+    });
+
+    // Department (nurse only - optional but validated if visible)
+    document.getElementById('fDepartment').addEventListener('blur', function() {
+      if (!this.value) return clearField('fDepartment','hDepartment');
+      const ok = this.value.trim().length >= 2;
+      setField('fDepartment','hDepartment', ok, ok ? '✓ Department noted' : 'Please enter your department');
     });
 
     function checkConfirm() {
