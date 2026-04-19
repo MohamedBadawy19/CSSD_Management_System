@@ -105,7 +105,12 @@
 
     /* ── Submit ───────────────────────────────────── */
     .signup-card {
-      max-width: 520px !important;
+      max-width: 520px;
+    }
+    @media (min-width: 768px) {
+      .signup-card {
+        max-width: 800px;
+      }
     }
 
     /* ── Already have account link ────────────────── */
