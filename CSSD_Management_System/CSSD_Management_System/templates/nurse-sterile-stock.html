@@ -1,11 +1,13 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sterile Stock - Nurse Portal</title>
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="stylesheet" href="../css/extended_styles.css">
+  <title>Sterile Stock — Nurse Portal | CSSD</title>
+  <meta name="description" content="View all packed and ready-to-deliver sterile instrument sets available from CSSD.">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -13,88 +15,116 @@
     <nav class="dashboard-nav theme-dark-teal">
       <div class="nav-brand">
         <div class="nav-logo teal"><i data-lucide="package-check"></i></div>
-        <div class="nav-title"><h2>Sterile Stock</h2><p>Currently Packed &amp; Ready</p></div>
+        <div class="nav-title">
+          <h2>Sterile Stock</h2>
+          <p>Packed &amp; Ready for Delivery</p>
+        </div>
       </div>
       <div class="nav-actions">
-        <a href="nurse-dashboard.html" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+        <a href="{% url 'nurse_dashboard' %}" class="btn-back">
+          <i data-lucide="arrow-left"></i> Back to Dashboard
+        </a>
+        <a href="/logout/" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
       </div>
     </nav>
 
     <main class="dashboard-main">
       <div class="dashboard-container">
 
-        <!-- Category filters -->
+        <!-- Search bar -->
         <div class="filters-bar" style="margin-bottom:1rem;">
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-            <span style="font-size:.8rem;color:#64748b;font-weight:600;">Filter by category:</span>
-            <button class="toggle-btn active" id="cat-All" onclick="filterCat('')">All</button>
+          <div class="search-input-wrapper">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="stockSearch" class="search-input"
+                   placeholder="Search by request ID, department, or instrument…">
           </div>
         </div>
 
+        <!-- Stock list -->
         <div class="detail-card list-card">
           <div class="card-header pb-border">
-            <h4>Available Sterile Instruments <span style="color:#0d9488;" id="itemCount"></span></h4>
+            <h4>
+              <i data-lucide="package-check" style="vertical-align:middle;margin-right:.4rem;color:#0d9488;"></i>
+              Available Sterile Instrument Sets
+              <span style="color:#0d9488;" id="itemCount"></span>
+            </h4>
           </div>
-          <div class="alert-list" id="stockList"><!-- JS --></div>
+
+          <div class="alert-list" id="stockList">
+
+            {% for req in packed_requests %}
+            <div class="alert-list-item stock-row"
+                 data-search="{{ req.id }} {{ req.department }} {% for item in req.items.all %}{{ item.inventory_item.name }} {% endfor %}">
+              <div class="ali-main">
+                <div class="ali-title-bar">
+                  <h4>REQ-{{ req.id|stringformat:"04d" }}</h4>
+                  <span class="pill" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;">
+                    Packed &amp; Ready
+                  </span>
+                </div>
+                <div class="ali-stats">
+                  <div class="ali-stat">
+                    <span class="as-label">Department</span>
+                    <span class="as-val">{{ req.department }}</span>
+                  </div>
+                  <div class="ali-stat">
+                    <span class="as-label">Packed at</span>
+                    <span class="as-val" style="color:#0d9488;font-weight:600;">
+                      {{ req.packed_at|date:"d M Y, H:i" }}
+                    </span>
+                  </div>
+                  {% if req.batch %}
+                  <div class="ali-stat">
+                    <span class="as-label">Batch</span>
+                    <span class="as-val">Batch #{{ req.batch.id }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+                <!-- Instruments -->
+                <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.35rem;">
+                  {% for item in req.items.all %}
+                  <span style="background:#f0fdf4;color:#065f46;border:1px solid #a7f3d0;
+                               border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:500;">
+                    {{ item.quantity }}× {{ item.inventory_item.name }}
+                  </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;padding:3rem;color:#94a3b8;">
+              <i data-lucide="package-x" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
+              <p>No sterile instrument sets are currently packed and ready.</p>
+            </div>
+            {% endfor %}
+
+          </div><!-- /alert-list -->
         </div>
 
       </div>
     </main>
   </div>
 
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/app.js"></script>
+  <script src="{% static 'script.js' %}"></script>
   <script>
-    // Sterile = items with decent stock (current_stock >= 3 for demo)
-    const sterileItems = MOCK.inventory.filter(i => i.current_stock >= 3);
-    const categories   = [...new Set(sterileItems.map(i => i.category))];
-    let   activeCat    = '';
-
-    function filterCat(cat) {
-      activeCat = cat;
-      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(`cat-${cat || 'All'}`).classList.add('active');
-      renderStock();
-    }
-
-    function renderStock() {
-      const items = activeCat ? sterileItems.filter(i => i.category === activeCat) : sterileItems;
-      document.getElementById('itemCount').textContent = `(${items.length} items)`;
-      const list = document.getElementById('stockList');
-      if (!items.length) {
-        list.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
-          <i data-lucide="package-x" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
-          <p>No sterile instruments in this category.</p></div>`;
-        lucide.createIcons(); return;
-      }
-      list.innerHTML = items.map(item => `
-        <div class="alert-list-item">
-          <div class="ali-main">
-            <div class="ali-title-bar">
-              <h4>${item.name}</h4>
-              <span class="pill" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;">Packed &amp; Ready</span>
-            </div>
-            <div class="ali-stats">
-              <div class="ali-stat"><span class="as-label">Category</span><span class="as-val">${item.category}</span></div>
-              <div class="ali-stat"><span class="as-label">Stock</span><span class="as-val" style="color:#0d9488;font-weight:600;">${item.current_stock}</span></div>
-            </div>
-          </div>
-        </div>`).join('');
-      lucide.createIcons();
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-      // Render category buttons
-      const filterBar = document.querySelector('.filters-bar > div');
-      categories.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.className = 'toggle-btn';
-        btn.id = `cat-${cat}`;
-        btn.textContent = cat;
-        btn.onclick = () => filterCat(cat);
-        filterBar.appendChild(btn);
+      lucide.createIcons();
+
+      const rows = document.querySelectorAll('.stock-row');
+      document.getElementById('itemCount').textContent = `(${rows.length} set${rows.length !== 1 ? 's' : ''})`;
+
+      // Live search
+      document.getElementById('stockSearch').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        let visible = 0;
+        rows.forEach(row => {
+          const hay = row.dataset.search.toLowerCase();
+          const show = hay.includes(q);
+          row.style.display = show ? '' : 'none';
+          if (show) visible++;
+        });
+        document.getElementById('itemCount').textContent = `(${visible} set${visible !== 1 ? 's' : ''})`;
       });
-      renderStock();
     });
   </script>
 </body>
