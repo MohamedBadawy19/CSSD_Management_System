@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSSD Dashboard</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .eta-badge {
+      display:inline-flex;align-items:center;gap:4px;
+      background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;
+      border-radius:6px;padding:2px 8px;font-size:.72rem;font-weight:500;
+    }
+    .eta-badge.urgent { background:#fef2f2;color:#dc2626;border-color:#fecaca; }
+
+    /* Status pill colours (inline via data-status) */
+    .status-Requested  { background:#f9731620;color:#f97316;border:1px solid #f9731640; }
+    .status-Collected  { background:#3b82f620;color:#3b82f6;border:1px solid #3b82f640; }
+    .status-Cleaned    { background:#06b6d420;color:#06b6d4;border:1px solid #06b6d440; }
+    .status-Sterilized { background:#6366f120;color:#6366f1;border:1px solid #6366f140; }
+    .status-Packed     { background:#a855f720;color:#a855f7;border:1px solid #a855f740; }
+    .status-Delivered  { background:#10b98120;color:#10b981;border:1px solid #10b98140; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+
+    <!-- ── Nav ── -->
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <div class="nav-logo blue"><i data-lucide="activity"></i></div>
+        <div class="nav-title">
+          <h2>CSSD Dashboard</h2>
+          <p>Central Sterile Supply</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="{% url 'dashboard_router' %}?filter={% if filter_status == 'pending' %}{% else %}pending{% endif %}"
+           class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;"
+           id="filterPendingBtn">
+          <i data-lucide="filter" style="width:14px;height:14px;"></i>
+          {% if filter_status == 'pending' %}Show All{% else %}Pending only{% endif %}
+        </a>
+        <div class="user-profile">
+          <div class="user-info-text">
+            <strong>{{ request.user.get_full_name|default:request.user.email }}</strong>
+            <span>{{ request.user.role }}</span>
+          </div>
+          <div class="user-avatar"><i data-lucide="user"></i></div>
+        </div>
+        <a href="/logout/" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+
+        <!-- ── Stats Grid ── -->
+        <div class="cssd-stats-grid">
+
+          <a href="{% url 'dashboard_router' %}" class="stat-card" style="text-decoration:none;display:block;">
+            <div class="stat-header">
+              <span class="stat-label">Active Requests</span>
+              <i data-lucide="layers" class="stat-icon-small blue"></i>
+            </div>
+            <h3 class="stat-value">{{ stat_active }}</h3>
+            <p class="stat-desc">In-progress across all stages</p>
+          </a>
+
+          <a href="{% url 'dashboard_router' %}?filter=pending" class="stat-card" style="text-decoration:none;display:block;">
+            <div class="stat-header">
+              <span class="stat-label">Pending Requests</span>
+              <i data-lucide="clock" class="stat-icon-small orange"></i>
+            </div>
+            <h3 class="stat-value">{{ stat_pending }}</h3>
+            <p class="stat-desc">Awaiting collection</p>
+          </a>
+
+          <a href="/cssd_inventory_alerts/" class="stat-card alert-stat" style="text-decoration:none;display:flex;">
+            <div class="stat-icon-wrapper"><i data-lucide="alert-triangle"></i></div>
+            <div class="stat-info">
+              <h3>Shortage Alerts</h3>
+              <span class="stat-number">{{ stat_alerts }}</span>
+            </div>
+          </a>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Est. Completion</span>
+              <i data-lucide="timer" class="stat-icon-small green"></i>
+            </div>
+            <h3 class="stat-value">{{ eta_text }}</h3>
+            <p class="stat-desc">{{ eta_desc }}</p>
+          </div>
+
+        </div>
+
+        <!-- ── Search bar ── -->
+        <div class="cssd-filters-bar">
+          <div class="search-input-wrapper expand">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" class="search-input" id="searchBox"
+                   placeholder="Search by request ID, nurse, department, or status…">
+          </div>
+        </div>
+
+        <!-- ── Requests panel ── -->
+        <div class="cssd-requests-panel" id="requests-panel">
+          <div class="panel-header">
+            <h3>
+              {% if filter_status == 'pending' %}Pending Requests{% else %}All Requests{% endif %}
+            </h3>
+          </div>
+
+          <div class="cssd-list" id="requestList">
+            {% for req in requests %}
+            {% with items=req.items.all %}
+            <a href="{% url 'cssd_request_details' req.id %}"
+               class="cssd-list-item"
+               style="text-decoration:none;color:inherit;display:flex;"
+               data-search="req-{{ req.id|stringformat:'04d' }} {{ req.requester.email }} {{ req.department }} {{ req.status }} {% for item in items %}{{ item.inventory_item.name }} {% endfor %}">
+
+              <div class="item-main">
+                <div class="item-title">
+                  <span class="item-id">REQ-{{ req.id|stringformat:"04d" }}</span>
+                  <span class="dot-separator">•</span>
+                  <span class="item-requester">{{ req.requester.email }}</span>
+                  {% if req.department %}
+                  <span class="dot-separator">•</span>
+                  <span style="font-size:.8rem;color:#64748b;">{{ req.department }}</span>
+                  {% endif %}
+                </div>
+                <div class="item-subtitle">
+                  {% for item in items %}{{ item.inventory_item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  {% if not items %}—{% endif %}
+                </div>
+                <div class="item-time">
+                  {{ req.submitted_at|date:"d M Y, H:i" }}
+                  {% if req.priority == 'Urgent' %}
+                  <span class="eta-badge urgent" style="margin-left:8px;">
+                    <i data-lucide="zap" style="width:11px;height:11px;"></i> Urgent
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="item-actions">
+                <span class="pill status-{{ req.status }}">{{ req.status }}</span>
+                {% if req.priority == 'Urgent' %}
+                  <span class="pill pill-urgent">Urgent</span>
+                {% else %}
+                  <span class="pill pill-normal">Normal</span>
+                {% endif %}
+              </div>
+            </a>
+            {% endwith %}
+            {% empty %}
+            <div style="text-align:center;padding:2rem;color:#94a3b8;">
+              No requests found.
+            </div>
+            {% endfor %}
+          </div><!-- /cssd-list -->
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="{% static 'script.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      // Client-side live search over the server-rendered rows
+      const searchBox = document.getElementById('searchBox');
+      const rows      = document.querySelectorAll('#requestList .cssd-list-item');
+
+      searchBox.addEventListener('input', () => {
+        const q = searchBox.value.toLowerCase();
+        rows.forEach(row => {
+          const hay = (row.dataset.search || '').toLowerCase();
+          row.style.display = hay.includes(q) ? '' : 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
