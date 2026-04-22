@@ -1,22 +1,14 @@
 # CSSD Management System Requirements
 # Django-based Central Sterile Services Department Management System
-
 # Core Framework
 Django>=4.2,<5.0
-
-# ASGI server support (included with Django but specified for clarity)
+# ASGI server support 
 asgiref>=3.7.0
-
 # SQL parsing utilities
 sqlparse>=0.4.4
-
 # Timezone data
 tzdata>=2023.3
-
-# Additional recommended packages for production
-# Uncomment these if deploying to production:
-
-# gunicorn>=21.0.0  # Production WSGI server
-# psycopg2-binary>=2.9.0  # PostgreSQL adapter (if switching from SQLite)
-# python-dotenv>=1.0.0  # Environment variable management
-# whitenoise>=6.5.0  # Static file serving
+gunicorn>=21.0.0 
+psycopg2-binary>=2.9.0  # PostgreSQL adapter
+python-dotenv>=1.0.0  # Environment variable management
+whitenoise>=6.5.0  # Static file serving
