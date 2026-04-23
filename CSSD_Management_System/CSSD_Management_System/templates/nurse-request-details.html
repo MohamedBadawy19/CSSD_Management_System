@@ -31,6 +31,33 @@
 
 <!-- MAIN -->
 <main class="dashboard-main details-main">
+
+  <!-- DELIVERY ACTION -->
+{% if req.status == "Packed" %}
+  <div class="detail-card" style="text-align:center; padding:24px;">
+    <i data-lucide="package-check" style="width:40px;height:40px;color:#0d9488;margin-bottom:12px;"></i>
+    <h4 style="margin-bottom:6px;">Instruments Ready for Collection</h4>
+    <p style="color:#64748b; margin-bottom:20px;">
+      Your instruments have been packed and are ready. Confirm once you have received them.
+    </p>
+    <form method="POST" action="{% url 'mark_delivered' req.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary" style="
+          background:#0d9488; color:white; border:none; padding:10px 28px;
+          border-radius:8px; font-size:15px; cursor:pointer; display:inline-flex;
+          align-items:center; gap:8px;">
+        <i data-lucide="check-circle-2"></i> Confirm Delivery
+      </button>
+    </form>
+  </div>
+{% elif req.status == "Delivered" %}
+  <div class="detail-card" style="text-align:center; padding:24px; background:#f0fdf4;">
+    <i data-lucide="circle-check-big" style="width:40px;height:40px;color:#16a34a;margin-bottom:12px;"></i>
+    <h4 style="color:#15803d;">Delivery Confirmed</h4>
+    <p style="color:#64748b;">You confirmed receipt on {{ req.delivered_at|date:"d M Y, H:i" }}.</p>
+  </div>
+{% endif %}
+
   <div class="container-center">
 
     <!-- SUMMARY -->

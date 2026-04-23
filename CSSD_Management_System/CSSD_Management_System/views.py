@@ -190,7 +190,58 @@ def nurse_request_details(request, request_id):
             'req':   instrument_request,
             'items': RequestItem.objects.filter(request=instrument_request),
             'eta':   instrument_request.get_eta(),
+            'error' : None
         }
         return render(request, 'nurse-request-details.html', request_dict)
 
     return HttpResponseForbidden("Access Denied")
+
+
+@login_required
+def mark_delivered(request, request_id):
+    
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+ 
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+ 
+    def _nurse_error_context(error):
+        return {
+            'req':   instrument_request,
+            'items': RequestItem.objects.filter(request=instrument_request),
+            'eta':   instrument_request.get_eta(),
+            'error': error,
+        }
+ 
+   
+    if request.user.department != instrument_request.department:
+        return render(request, 'nurse-request-details.html',
+                      _nurse_error_context(
+                          f"Access Denied: Only nurses from the "
+                          f"'{instrument_request.department}' department "
+                          f"can confirm delivery of this request."
+                      ))
+ 
+    
+    if instrument_request.status != 'Packed':
+        return render(request, 'nurse-request-details.html',
+                      _nurse_error_context(
+                          f"Cannot confirm delivery: request is currently "
+                          f"'{instrument_request.status}'. "
+                          f"Only 'Packed' requests can be marked as Delivered."
+                      ))
+ 
+    
+
+
+    instrument_request.status       = 'Delivered'
+    instrument_request.delivered_at = timezone.now()
+    instrument_request.is_archived  = True
+    instrument_request.save()
+
+
+    for item in RequestItem.objects.filter(request=instrument_request):
+        item.inventory_item.current_stock += item.quantity
+        item.inventory_item.save()
+ 
+    return redirect('nurse_request_details', request_id=request_id)

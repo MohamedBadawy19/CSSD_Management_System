@@ -19,6 +19,7 @@ urlpatterns = [
     path('nurse_create_request/', views.nurse_create_request, name='nurse_create_request'),
     path('save_instrument_request/', views.save_instrument_request, name='save_instrument_request'),
     path('nurse_request_details/<int:request_id>/', views.nurse_request_details, name='nurse_request_details'),
+    path('requests/<int:request_id>/deliver/', views.mark_delivered, name='mark_delivered'),
 
     # ── US-07 to US-10 (Mohamed Badawy) — see urls_us07_10.py ────
     path('', include('CSSD_Management_System.urls_us07_10')),
