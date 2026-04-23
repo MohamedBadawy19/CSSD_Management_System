@@ -243,3 +243,6 @@ def nurse_sterile_stock(request):
     )
     return render(request, 'nurse-sterile-stock.html',
                   {'packed_requests': packed_requests})
+
+
+

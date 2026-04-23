@@ -190,7 +190,54 @@ def nurse_request_details(request, request_id):
             'req':   instrument_request,
             'items': RequestItem.objects.filter(request=instrument_request),
             'eta':   instrument_request.get_eta(),
+            'error' : None
         }
         return render(request, 'nurse-request-details.html', request_dict)
 
     return HttpResponseForbidden("Access Denied")
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-11  Mark as Delivered   (Packed → Delivered)  — initiated by Nurse
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def mark_delivered(request, request_id):
+    """
+    Allows the requesting nurse to confirm delivery of their packed instruments.
+
+    Acceptance criteria:
+    • Given an instrument request is in 'Packed' state, When the requesting
+      Nurse clicks 'Confirm Delivery', Then the state changes to 'Delivered'
+      and a timestamp is recorded.
+    • Given the nurse is NOT the original requester, Then access is denied.
+    • Given the request is NOT in 'Packed' state, Then the transition is
+      blocked and an error is shown.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    # Only the requesting nurse may confirm delivery
+    if request.user != instrument_request.requester:
+        return HttpResponseForbidden("Access Denied: Only the requesting nurse can confirm delivery.")
+
+    # Pre-condition: must be in 'Packed' state
+    if instrument_request.status != 'Packed':
+        request_dict = {
+            'req':   instrument_request,
+            'items': RequestItem.objects.filter(request=instrument_request),
+            'eta':   instrument_request.get_eta(),
+            'error': (f"Cannot confirm delivery: request is currently "
+                      f"'{instrument_request.status}'. "
+                      f"Only 'Packed' requests can be marked as Delivered."),
+        }
+        return render(request, 'nurse-request-details.html', request_dict)
+
+    # State transition + timestamp
+    instrument_request.status       = 'Delivered'
+    instrument_request.delivered_at = timezone.now()
+    instrument_request.save()
+
+    return redirect('nurse_request_details', request_id=request_id)
