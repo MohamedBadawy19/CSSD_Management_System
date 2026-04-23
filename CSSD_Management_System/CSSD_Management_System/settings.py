@@ -123,7 +123,7 @@ AUTH_USER_MODEL = 'CSSD_Management_System.CustomUser'
 # Authentication Settings
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard_router'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'home'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'CSSD_Management_System', 'static'),
