@@ -197,47 +197,53 @@ def nurse_request_details(request, request_id):
     return HttpResponseForbidden("Access Denied")
 
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# US-11  Mark as Delivered   (Packed → Delivered)  — initiated by Nurse
-# ─────────────────────────────────────────────────────────────────────────────
 @login_required
 def mark_delivered(request, request_id):
     """
-    Allows the requesting nurse to confirm delivery of their packed instruments.
-
+    US-11 — Nurse confirms delivery of packed instruments.
+ 
     Acceptance criteria:
-    • Given an instrument request is in 'Packed' state, When the requesting
-      Nurse clicks 'Confirm Delivery', Then the state changes to 'Delivered'
-      and a timestamp is recorded.
-    • Given the nurse is NOT the original requester, Then access is denied.
-    • Given the request is NOT in 'Packed' state, Then the transition is
-      blocked and an error is shown.
+    • AC1: Given an instrument is in 'Packed' state, When ANY nurse from the
+      requesting department marks it as 'Delivered', Then the state changes to
+      'Delivered' and the record is archived (is_archived=True).
+    • AC2: Given a nurse from a DIFFERENT department attempts to mark it as
+      'Delivered', Then the system blocks the action and shows an error.
     """
     if request.method != 'POST':
         return HttpResponseForbidden("Method not allowed")
-
+ 
     instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
-
-    # Only the requesting nurse may confirm delivery
-    if request.user != instrument_request.requester:
-        return HttpResponseForbidden("Access Denied: Only the requesting nurse can confirm delivery.")
-
-    # Pre-condition: must be in 'Packed' state
-    if instrument_request.status != 'Packed':
-        request_dict = {
+ 
+    def _nurse_error_context(error):
+        return {
             'req':   instrument_request,
             'items': RequestItem.objects.filter(request=instrument_request),
             'eta':   instrument_request.get_eta(),
-            'error': (f"Cannot confirm delivery: request is currently "
-                      f"'{instrument_request.status}'. "
-                      f"Only 'Packed' requests can be marked as Delivered."),
+            'error': error,
         }
-        return render(request, 'nurse-request-details.html', request_dict)
-
-    # State transition + timestamp
+ 
+   
+    if request.user.department != instrument_request.department:
+        return render(request, 'nurse-request-details.html',
+                      _nurse_error_context(
+                          f"Access Denied: Only nurses from the "
+                          f"'{instrument_request.department}' department "
+                          f"can confirm delivery of this request."
+                      ))
+ 
+    
+    if instrument_request.status != 'Packed':
+        return render(request, 'nurse-request-details.html',
+                      _nurse_error_context(
+                          f"Cannot confirm delivery: request is currently "
+                          f"'{instrument_request.status}'. "
+                          f"Only 'Packed' requests can be marked as Delivered."
+                      ))
+ 
+    # AC1 — state transition + timestamp + archive
     instrument_request.status       = 'Delivered'
     instrument_request.delivered_at = timezone.now()
+    instrument_request.is_archived  = True
     instrument_request.save()
-
+ 
     return redirect('nurse_request_details', request_id=request_id)
