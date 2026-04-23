@@ -199,16 +199,7 @@ def nurse_request_details(request, request_id):
 
 @login_required
 def mark_delivered(request, request_id):
-    """
-    US-11 — Nurse confirms delivery of packed instruments.
- 
-    Acceptance criteria:
-    • AC1: Given an instrument is in 'Packed' state, When ANY nurse from the
-      requesting department marks it as 'Delivered', Then the state changes to
-      'Delivered' and the record is archived (is_archived=True).
-    • AC2: Given a nurse from a DIFFERENT department attempts to mark it as
-      'Delivered', Then the system blocks the action and shows an error.
-    """
+    
     if request.method != 'POST':
         return HttpResponseForbidden("Method not allowed")
  
@@ -240,10 +231,17 @@ def mark_delivered(request, request_id):
                           f"Only 'Packed' requests can be marked as Delivered."
                       ))
  
-    # AC1 — state transition + timestamp + archive
+    
+
+
     instrument_request.status       = 'Delivered'
     instrument_request.delivered_at = timezone.now()
     instrument_request.is_archived  = True
     instrument_request.save()
+
+
+    for item in RequestItem.objects.filter(request=instrument_request):
+        item.inventory_item.current_stock += item.quantity
+        item.inventory_item.save()
  
     return redirect('nurse_request_details', request_id=request_id)
