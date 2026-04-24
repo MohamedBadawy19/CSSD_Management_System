@@ -1,0 +1,382 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Details — CSSD | REQ-{{ req.id|stringformat:"04d" }}</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* ── Error / Success banner ─────────────────────────── */
+    .alert-banner {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .75rem 1rem; border-radius: 10px;
+      font-size: .875rem; font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+    .alert-banner.error   { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+    .alert-banner.success { background:#f0fdf4; color:#16a34a; border:1px solid #86efac; }
+
+    /* ── Timeline ───────────────────────────────────────── */
+    .ht-node          { display:flex; flex-direction:column; align-items:center; gap:.35rem; }
+    .node-circle      { width:32px; height:32px; border-radius:50%; background:#e2e8f0;
+                        color:#94a3b8; display:flex; align-items:center; justify-content:center;
+                        font-size:.8rem; font-weight:700; }
+    .ht-node.completed .node-circle { background:#0d9488; color:#fff; }
+    .ht-node.current  .node-circle  { background:#2563eb; color:#fff; box-shadow:0 0 0 4px #bfdbfe; }
+    .ht-node p        { font-size:.72rem; color:#64748b; margin:0; text-align:center; }
+    .ht-node .ht-ts   { font-size:.65rem; color:#0d9488; font-weight:600; text-align:center; }
+    .ht-current       { font-size:.65rem; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;
+                        border-radius:999px; padding:1px 8px; }
+    .ht-line          { flex:1; height:2px; background:#e2e8f0; align-self:center; min-width:24px; }
+    .ht-line.completed{ background:#0d9488; }
+    .horizontal-timeline { display:flex; align-items:flex-start; gap:.5rem; overflow-x:auto;
+                           padding:.5rem 0; }
+
+    /* ── Action footer ──────────────────────────────────── */
+    .action-footer    { display:flex; gap:.75rem; flex-wrap:wrap; padding-top:1rem;
+                        border-top:1px solid #e2e8f0; margin-top:1rem; }
+
+    /* ── Batch select row ───────────────────────────────── */
+    .batch-row        { display:flex; align-items:center; gap:.6rem; flex:1; }
+    .batch-row select { flex:1; padding:.5rem .75rem; border:1px solid #e2e8f0;
+                        border-radius:8px; font-size:.875rem; }
+
+    .confirm-modal[hidden] { display: none; }
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+    }
+    .confirm-dialog {
+      width: min(100%, 420px);
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+      padding: 1.25rem;
+    }
+    .confirm-dialog h4 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: #0f172a;
+    }
+    .confirm-dialog p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'dashboard_router' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title">
+          <h2>Request Details</h2>
+          <p>REQ-{{ req.id|stringformat:"04d" }}</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="{% url 'logout' %}" class="btn-logout"><i data-lucide="log-out"></i> Log out</a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main details-main">
+      <div class="container-center">
+
+        <!-- ── Error banner ── -->
+        {% if error %}
+        <div class="alert-banner error">
+          <i data-lucide="alert-circle" style="width:18px;height:18px;flex-shrink:0;"></i>
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- ── Summary card ── -->
+        <div class="detail-card summary-card row-layout">
+          <div>
+            <h3>Request Summary</h3>
+            <div class="sg-grid-small">
+              <div class="sg-label"><i data-lucide="user"></i> Submitted by</div>
+              <div class="sg-value text-right">{{ req.requester.email }}</div>
+              <div class="sg-label"><i data-lucide="calendar"></i> Submitted at</div>
+              <div class="sg-value text-right">{{ req.submitted_at|date:"d M Y, H:i" }}</div>
+              <div class="sg-label"><i data-lucide="building"></i> Department</div>
+              <div class="sg-value text-right">{{ req.department }}</div>
+              {% if req.batch %}
+              <div class="sg-label"><i data-lucide="flask-conical"></i> Batch</div>
+              <div class="sg-value text-right">Batch #{{ req.batch.id }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="summary-pills-v">
+            <div class="sg-item-h">
+              <span class="sg-label"><i data-lucide="alert-circle"></i> Priority</span>
+              {% if req.priority == "Urgent" %}
+                <span class="pill pill-urgent">Urgent</span>
+              {% else %}
+                <span class="pill pill-normal">Normal</span>
+              {% endif %}
+            </div>
+            <div class="sg-item-h">
+              <span class="sg-label"><i data-lucide="check-circle-2"></i> Current Status</span>
+              <span class="pill status-{{ req.status }}" id="statusPill">{{ req.status }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Instruments + Operator ── -->
+        <div class="grid-2-col">
+          <div class="detail-card instruments-card">
+            <h3>Requested Instruments</h3>
+            <ul class="instrument-checklist">
+              {% for item in items %}
+              <li>
+                <span>{{ item.quantity }}× {{ item.inventory_item.name }}</span>
+                <i data-lucide="check-circle-2" class="icon-green"></i>
+              </li>
+              {% empty %}
+              <li><span style="color:#94a3b8;">No instruments listed.</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="col-stack">
+            {% if req.last_operator %}
+            <div class="detail-card assigned-card">
+              <h3>Last Operator</h3>
+              <div class="technician-badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">
+                <div class="avatar" style="background:#3b82f6;color:white;"><i data-lucide="user-check"></i></div>
+                <div>
+                  <strong>{{ req.last_operator.email }}</strong>
+                  <p>{{ req.last_operator.role }}</p>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if req.notes %}
+            <div class="detail-card notes-card">
+              <h3>Notes</h3>
+              <div class="notes-box">{{ req.notes }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ── Processing Timeline ── -->
+        <div class="detail-card ht-card">
+          <h3>Processing Timeline</h3>
+          <div class="horizontal-timeline">
+
+
+
+            <!-- Requested -->
+            <div class="ht-node {% if req.status == 'Requested' %}current{% else %}completed{% endif %}">
+              <div class="node-circle">1</div>
+              <p>Requested</p>
+              <span class="ht-ts">{{ req.submitted_at|date:"H:i" }}</span>
+            </div>
+            <div class="ht-line {% if req.status != 'Requested' %}completed{% endif %}"></div>
+
+            <!-- Collected -->
+            <div class="ht-node
+              {% if req.status == 'Collected' %}current
+              {% elif req.collected_at %}completed{% endif %}">
+              <div class="node-circle">2</div>
+              <p>Collected</p>
+              {% if req.collected_at %}<span class="ht-ts">{{ req.collected_at|date:"H:i" }}</span>{% endif %}
+              {% if req.status == 'Collected' %}<span class="ht-current">Current</span>{% endif %}
+            </div>
+            <div class="ht-line {% if req.cleaned_at %}completed{% endif %}"></div>
+
+            <!-- Cleaned -->
+            <div class="ht-node
+              {% if req.status == 'Cleaned' %}current
+              {% elif req.cleaned_at %}completed{% endif %}">
+              <div class="node-circle">3</div>
+              <p>Cleaned</p>
+              {% if req.cleaned_at %}<span class="ht-ts">{{ req.cleaned_at|date:"H:i" }}</span>{% endif %}
+              {% if req.status == 'Cleaned' %}<span class="ht-current">Current</span>{% endif %}
+            </div>
+            <div class="ht-line {% if req.sterilized_at %}completed{% endif %}"></div>
+
+            <!-- Sterilized -->
+            <div class="ht-node
+              {% if req.status == 'Sterilized' %}current
+              {% elif req.sterilized_at %}completed{% endif %}">
+              <div class="node-circle">4</div>
+              <p>Sterilized</p>
+              {% if req.sterilized_at %}<span class="ht-ts">{{ req.sterilized_at|date:"H:i" }}</span>{% endif %}
+              {% if req.status == 'Sterilized' %}<span class="ht-current">Current</span>{% endif %}
+            </div>
+            <div class="ht-line {% if req.packed_at %}completed{% endif %}"></div>
+
+            <!-- Packed -->
+            <div class="ht-node
+              {% if req.status == 'Packed' %}current
+              {% elif req.packed_at %}completed{% endif %}">
+              <div class="node-circle">5</div>
+              <p>Packed</p>
+              {% if req.packed_at %}<span class="ht-ts">{{ req.packed_at|date:"H:i" }}</span>{% endif %}
+              {% if req.status == 'Packed' %}<span class="ht-current">Current</span>{% endif %}
+            </div>
+            <div class="ht-line {% if req.delivered_at %}completed{% endif %}"></div>
+
+            <!-- Delivered -->
+            <div class="ht-node {% if req.delivered_at %}completed{% endif %}">
+              <div class="node-circle">6</div>
+              <p>Delivered</p>
+              {% if req.delivered_at %}<span class="ht-ts">{{ req.delivered_at|date:"H:i" }}</span>{% endif %}
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Action Footer ── -->
+        <div class="action-footer">
+
+          {# US-07: Requested → Collected #}
+          {% if req.status == 'Requested' %}
+          <form method="post" action="{% url 'mark_collected' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Collected');">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary flex-1" id="btnCollected">
+              <i data-lucide="truck"></i> Mark as Collected
+            </button>
+          </form>
+
+          {# US-08: Collected → Cleaned #}
+          {% elif req.status == 'Collected' %}
+          <form method="post" action="{% url 'mark_cleaned' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Cleaned');">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary flex-1" id="btnCleaned">
+              <i data-lucide="droplets"></i> Mark as Cleaned
+            </button>
+          </form>
+
+          {# US-09: Cleaned → Sterilized (requires batch) #}
+          {% elif req.status == 'Cleaned' %}
+          <form method="post" action="{% url 'mark_sterilized' req.id %}" style="display:flex;gap:.6rem;flex:1;flex-wrap:wrap;" onsubmit="return confirmSterilize(event);">
+            {% csrf_token %}
+            <div class="batch-row">
+              <select name="batch_id" id="batchSelect">
+                <option value="">— Select Batch (optional) —</option>
+                {% for batch in batches %}
+                <option value="{{ batch.id }}">
+                  Batch #{{ batch.id }} — {{ batch.temperature }}°C / {{ batch.cycle_duration }} min ({{ batch.status }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="btn-primary" id="btnSterilized">
+              <i data-lucide="check-circle-2"></i> Mark as Sterilized
+            </button>
+          </form>
+
+          {# US-10: Sterilized → Packed #}
+          {% elif req.status == 'Sterilized' %}
+          <form method="post" action="{% url 'mark_packed' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Packed');">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary flex-1" id="btnPacked">
+              <i data-lucide="package"></i> Mark as Packed
+            </button>
+          </form>
+
+          {% elif req.status == 'Packed' %}
+          <span style="color:#0d9488;font-weight:600;display:flex;align-items:center;gap:.4rem;">
+            <i data-lucide="package-check"></i> Ready for Delivery
+          </span>
+
+          {% elif req.status == 'Delivered' %}
+          <span style="color:#10b981;font-weight:600;display:flex;align-items:center;gap:.4rem;">
+            <i data-lucide="check-circle-2"></i> Fully Delivered
+          </span>
+          {% endif %}
+
+        </div><!-- /action-footer -->
+
+      </div>
+    </main>
+  </div>
+
+  <div class="confirm-modal" id="confirmModal" hidden>
+    <div class="confirm-dialog">
+      <h4>Confirm status update</h4>
+      <p id="confirmMessage">Are you sure you want to continue?</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-outline" id="confirmCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmAccept">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pendingForm = null;
+
+    function validateBatch() {
+      const sel = document.getElementById('batchSelect');
+      if (!sel || !sel.value) {
+        alert('Please select a sterilization batch before proceeding.');
+        return false;
+      }
+      return true;
+    }
+    function openConfirmModal(message, form) {
+      pendingForm = form;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmModal').hidden = false;
+    }
+    function closeConfirmModal() {
+      pendingForm = null;
+      document.getElementById('confirmModal').hidden = true;
+    }
+    function confirmStatusChange(event, nextStatus) {
+      event.preventDefault();
+      openConfirmModal(`Are you sure you want to move this request to ${nextStatus}?`, event.currentTarget);
+      return false;
+    }
+    function confirmSterilize(event) {
+      event.preventDefault();
+      if (!validateBatch()) {
+        return false;
+      }
+      openConfirmModal('Are you sure you want to move this request to Sterilized?', event.currentTarget);
+      return false;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmCancel').addEventListener('click', closeConfirmModal);
+      document.getElementById('confirmAccept').addEventListener('click', () => {
+        if (pendingForm) {
+          const form = pendingForm;
+          closeConfirmModal();
+          form.submit();
+        }
+      });
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeConfirmModal();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
