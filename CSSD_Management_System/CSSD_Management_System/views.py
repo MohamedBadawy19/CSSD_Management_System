@@ -48,7 +48,7 @@ def dashboard_router(request):
     if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
         return render(request , 'cssd-dashboard.html')
     elif role == 'Department Nurse':
-        return redirect('nurse_dashboard')
+        return render(request , 'nurse-dashboard.html')
     else:
         return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
 
@@ -56,7 +56,6 @@ def dashboard_router(request):
 
 @login_required
 def nurse_dashboard(request):
-
     final_requests = []
 
     requests = InstrumentRequest.objects.filter(requester = request.user)
@@ -93,7 +92,6 @@ def nurse_dashboard(request):
     }
 
     return render(request , 'nurse-dashboard.html'  , context)
-
 def get_instruments():
     instruments = []
     for instrument in InventoryItem.objects.all():
@@ -146,8 +144,6 @@ def save_instrument_request(request):
             database_instrument.current_stock -= quantity
             database_instrument.save()
     return redirect('nurse_create_request')
-
-
 def nurse_request_details(request , request_id):
     
     
