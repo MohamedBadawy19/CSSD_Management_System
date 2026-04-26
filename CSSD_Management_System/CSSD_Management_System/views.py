@@ -47,7 +47,7 @@ def dashboard_router(request):
     if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
         return render(request , 'cssd-dashboard.html')
     elif role == 'Department Nurse':
-        return redirect('nurse_dashboard')
+        return render(request , 'nurse-dashboard.html')
     else:
         return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sterilization Batches - CSSD</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/extended_styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="cssd-dashboard.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title"><h2>Sterilization Batches</h2><p>All batch records</p></div>
+      </div>
+      <div class="nav-actions">
+        <a href="cssd-batch-create.html" class="btn-primary" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:.85rem;">
+          <i data-lucide="plus"></i> New Batch
+        </a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+        <div class="detail-card list-card" style="padding:0;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Batch ID</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Method</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Operator</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Temp (°C)</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Duration</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Status</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #e2e8f0;">Created</th>
+              </tr>
+            </thead>
+            <tbody id="batchTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/mock-data.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tbody = document.getElementById('batchTable');
+      if (!MOCK.batches.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#94a3b8;">No batches created yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = MOCK.batches.map(b => {
+        const inProgress = b.status === 'In Progress';
+        const pillStyle = inProgress
+          ? 'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;'
+          : 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;';
+        return `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:12px 16px;">
+            <a href="cssd-batch-detail.html?id=${b.id}" style="color:#2563eb;font-weight:600;text-decoration:none;">Batch #${b.id}</a>
+          </td>
+          <td style="padding:12px 16px;">${b.method}</td>
+          <td style="padding:12px 16px;">${b.operator}</td>
+          <td style="padding:12px 16px;">${b.temperature}°C</td>
+          <td style="padding:12px 16px;">${b.duration} min</td>
+          <td style="padding:12px 16px;"><span class="pill" style="${pillStyle}">${b.status}</span></td>
+          <td style="padding:12px 16px;color:#64748b;">${b.created_at}</td>
+        </tr>`;
+      }).join('');
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

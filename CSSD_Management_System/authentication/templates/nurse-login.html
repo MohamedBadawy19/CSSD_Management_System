@@ -4,17 +4,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Staff Login - CSSD</title>
+  <title>Nurse Login - CSSD</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <div class="page-wrapper theme-blue">
-    <header class="header theme-blue">
+  <div class="page-wrapper theme-teal">
+    <header class="header theme-teal">
       <div class="header-content">
         <div class="header-title">
-          <h1>CSSD Management System</h1>
-          <p>Central Sterile Supply Department</p>
+          <h1>Nurse Portal</h1>
+          <p>Instrument Request Management</p>
         </div>
         <div class="system-status">
           <div class="status-dot"></div>
@@ -33,20 +33,31 @@
 
         <div class="login-card">
           <div class="login-header">
-            <div class="app-icon blue">
-              <i data-lucide="activity" style="width:32px;height:32px;"></i>
+            <div class="app-icon teal">
+              <i data-lucide="stethoscope" style="width:32px;height:32px;"></i>
             </div>
-            <h2 class="login-title">Staff Login</h2>
-            <p class="login-subtitle">Enter your credentials to access CSSD</p>
+            <h2 class="login-title">Nurse Login</h2>
+            <p class="login-subtitle">Enter your credentials to access the portal</p>
           </div>
 
-          <!-- PROJ-11: CSSD Staff Login -->
-          <form id="loginForm" data-role="Staff" action="{% url 'login' %}" method = 'post'>
+          <!-- PROJ-12: Nurse Login -->
+          <form id="loginForm" data-role="Nurse" action="{% url 'login' %}?role=nurse" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="role" value="nurse">
+            {% if form.non_field_errors %}
+            <div class="security-notice" style="margin-bottom:1rem;border-color:#fecaca;background:#fef2f2;">
+              <i data-lucide="alert-circle" class="security-icon" style="color:#dc2626;"></i>
+              <div class="security-content">
+                <h4 style="color:#b91c1c;">Sign-in failed</h4>
+                <p style="color:#b91c1c;">{{ form.non_field_errors|striptags }}</p>
+              </div>
+            </div>
+            {% endif %}
             <div class="form-group">
               <label class="form-label">Email Address</label>
               <div class="input-wrapper">
                 <i data-lucide="mail" class="input-icon"></i>
-                <input type="email" name="username" class="form-input" placeholder="staff@hospital.com" required>
+                <input type="email" name="username" class="form-input" placeholder="nurse@hospital.com" value="{{ form.username.value|default:'' }}" required>
               </div>
             </div>
 
@@ -68,8 +79,8 @@
               <a href="#" class="forgot-link">Forgot Password?</a>
             </div>
 
-            <button type="submit" class="btn-submit blue" id="submitBtn">
-              <span id="btnText">Sign In to CSSD</span>
+            <button type="submit" class="btn-submit teal" id="submitBtn">
+              <span id="btnText">Sign In to Portal</span>
               <i data-lucide="log-in" id="btnIcon" style="width:18px;height:18px;margin-left:8px;"></i>
             </button>
           </form>
@@ -78,7 +89,7 @@
             <i data-lucide="shield-alert" class="security-icon"></i>
             <div class="security-content">
               <h4>Security Notice</h4>
-              <p>Unauthorized access to CSSD systems is strictly prohibited and monitored.</p>
+              <p>This system contains confidential patient information. Unauthorized access is prohibited.</p>
             </div>
           </div>
         </div>
@@ -87,6 +98,6 @@
   </div>
 
   <script src="../static/mock-data.js"></script>
-  <script src="../static/script.js"></script>
+  <script src="{% static 'script.js' %}"></script>
 </body>
 </html>
