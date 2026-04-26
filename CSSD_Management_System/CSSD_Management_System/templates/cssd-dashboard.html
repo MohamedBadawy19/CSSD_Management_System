@@ -39,7 +39,7 @@
       </div>
       <div class="nav-actions">
         <a href="{% url 'dashboard_router' %}?filter={% if filter_status == 'pending' %}{% else %}pending{% endif %}"
-           class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;"
+           class="nav-action-link"
            id="filterPendingBtn">
           <i data-lucide="filter" style="width:14px;height:14px;"></i>
           {% if filter_status == 'pending' %}Show All{% else %}Pending only{% endif %}
@@ -51,7 +51,7 @@
           </div>
           <div class="user-avatar"><i data-lucide="user"></i></div>
         </div>
-        <a href="/logout/" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
+        <a href="{% url 'logout' %}" class="btn-logout"><i data-lucide="log-out"></i> Log out</a>
       </div>
     </nav>
 

@@ -43,6 +43,43 @@
     .batch-row        { display:flex; align-items:center; gap:.6rem; flex:1; }
     .batch-row select { flex:1; padding:.5rem .75rem; border:1px solid #e2e8f0;
                         border-radius:8px; font-size:.875rem; }
+
+    .confirm-modal[hidden] { display: none; }
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+    }
+    .confirm-dialog {
+      width: min(100%, 420px);
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+      padding: 1.25rem;
+    }
+    .confirm-dialog h4 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      color: #0f172a;
+    }
+    .confirm-dialog p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
   </style>
 </head>
 <body>
@@ -56,7 +93,7 @@
         </div>
       </div>
       <div class="nav-actions">
-        <a href="/logout/" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
+        <a href="{% url 'logout' %}" class="btn-logout"><i data-lucide="log-out"></i> Log out</a>
       </div>
     </nav>
 
@@ -99,7 +136,7 @@
             </div>
             <div class="sg-item-h">
               <span class="sg-label"><i data-lucide="check-circle-2"></i> Current Status</span>
-              <span class="pill" id="statusPill">{{ req.status }}</span>
+              <span class="pill status-{{ req.status }}" id="statusPill">{{ req.status }}</span>
             </div>
           </div>
         </div>
@@ -217,7 +254,7 @@
 
           {# US-07: Requested → Collected #}
           {% if req.status == 'Requested' %}
-          <form method="post" action="{% url 'mark_collected' req.id %}" style="display:contents;">
+          <form method="post" action="{% url 'mark_collected' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Collected');">
             {% csrf_token %}
             <button type="submit" class="btn-primary flex-1" id="btnCollected">
               <i data-lucide="truck"></i> Mark as Collected
@@ -226,7 +263,7 @@
 
           {# US-08: Collected → Cleaned #}
           {% elif req.status == 'Collected' %}
-          <form method="post" action="{% url 'mark_cleaned' req.id %}" style="display:contents;">
+          <form method="post" action="{% url 'mark_cleaned' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Cleaned');">
             {% csrf_token %}
             <button type="submit" class="btn-primary flex-1" id="btnCleaned">
               <i data-lucide="droplets"></i> Mark as Cleaned
@@ -235,7 +272,7 @@
 
           {# US-09: Cleaned → Sterilized (requires batch) #}
           {% elif req.status == 'Cleaned' %}
-          <form method="post" action="{% url 'mark_sterilized' req.id %}" style="display:flex;gap:.6rem;flex:1;flex-wrap:wrap;">
+          <form method="post" action="{% url 'mark_sterilized' req.id %}" style="display:flex;gap:.6rem;flex:1;flex-wrap:wrap;" onsubmit="return confirmSterilize(event);">
             {% csrf_token %}
             <div class="batch-row">
               <select name="batch_id" id="batchSelect">
@@ -254,7 +291,7 @@
 
           {# US-10: Sterilized → Packed #}
           {% elif req.status == 'Sterilized' %}
-          <form method="post" action="{% url 'mark_packed' req.id %}" style="display:contents;">
+          <form method="post" action="{% url 'mark_packed' req.id %}" style="display:contents;" onsubmit="return confirmStatusChange(event, 'Packed');">
             {% csrf_token %}
             <button type="submit" class="btn-primary flex-1" id="btnPacked">
               <i data-lucide="package"></i> Mark as Packed
@@ -278,7 +315,20 @@
     </main>
   </div>
 
+  <div class="confirm-modal" id="confirmModal" hidden>
+    <div class="confirm-dialog">
+      <h4>Confirm status update</h4>
+      <p id="confirmMessage">Are you sure you want to continue?</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-outline" id="confirmCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmAccept">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    let pendingForm = null;
+
     function validateBatch() {
       const sel = document.getElementById('batchSelect');
       if (!sel || !sel.value) {
@@ -287,26 +337,45 @@
       }
       return true;
     }
+    function openConfirmModal(message, form) {
+      pendingForm = form;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmModal').hidden = false;
+    }
+    function closeConfirmModal() {
+      pendingForm = null;
+      document.getElementById('confirmModal').hidden = true;
+    }
+    function confirmStatusChange(event, nextStatus) {
+      event.preventDefault();
+      openConfirmModal(`Are you sure you want to move this request to ${nextStatus}?`, event.currentTarget);
+      return false;
+    }
+    function confirmSterilize(event) {
+      event.preventDefault();
+      if (!validateBatch()) {
+        return false;
+      }
+      openConfirmModal('Are you sure you want to move this request to Sterilized?', event.currentTarget);
+      return false;
+    }
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
 
-      // Colour the status pill dynamically
-      const colors = {
-        Requested:'#f97316', Collected:'#3b82f6', Cleaned:'#06b6d4',
-        Sterilized:'#6366f1', Packed:'#a855f7', Delivered:'#10b981'
-      };
-      const pill = document.getElementById('statusPill');
-      if (pill) {
-        const s = pill.textContent.trim();
-        const c = colors[s] || '#64748b';
-        pill.style.background = c + '20';
-        pill.style.color      = c;
-        pill.style.border     = `1px solid ${c}40`;
-        pill.style.borderRadius = '999px';
-        pill.style.padding    = '2px 10px';
-        pill.style.fontSize   = '.8rem';
-        pill.style.fontWeight = '600';
-      }
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmCancel').addEventListener('click', closeConfirmModal);
+      document.getElementById('confirmAccept').addEventListener('click', () => {
+        if (pendingForm) {
+          const form = pendingForm;
+          closeConfirmModal();
+          form.submit();
+        }
+      });
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeConfirmModal();
+        }
+      });
     });
   </script>
 </body>
