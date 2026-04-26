@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nurse Dashboard - CSSD</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+    <nav class="dashboard-nav theme-dark-teal">
+      <div class="nav-brand">
+        <div class="nav-logo teal"><i data-lucide="stethoscope"></i></div>
+        <div class="nav-title">
+          <h2>Nurse Portal</h2>
+          <p id="nurseSubtitle">Loading…</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button class="icon-btn notification-btn" id="notifBtn" title="Notifications">
+          <i data-lucide="bell"></i>
+          <span class="notification-badge" id="notifBadge" style="display:none;"></span>
+        </button>
+        <a href="nurse-sterile-stock.html" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">
+          <i data-lucide="package-check"></i> Sterile Stock
+        </a>
+        <a href="/logout/" class="btn-logout"><i data-lucide="log-out"></i> Logout</a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+
+        <!-- Notifications banner -->
+        <div id="notifBanner" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+          <strong style="color:#16a34a;font-size:.85rem;">🔔 New Updates</strong>
+          <div id="notifList"></div>
+          <button onclick="markRead()" style="font-size:.75rem;color:#16a34a;margin-top:.5rem;background:none;border:none;cursor:pointer;padding:0;">Mark all as read</button>
+        </div>
+
+        <!-- Create request CTA -->
+        <div class="action-header">
+          <a href="nurse-create-request.html" class="btn-create-request" style="text-decoration:none;">
+            <i data-lucide="plus"></i> Create New Request
+            <span class="badge-pill">Quick Access</span>
+          </a>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-info"><span class="stat-label">Total Requests</span><h3 class="stat-value" id="statTotal">—</h3></div>
+            <i data-lucide="package" class="stat-icon blue"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info"><span class="stat-label">In Progress</span><h3 class="stat-value" id="statInProgress">—</h3></div>
+            <i data-lucide="clock" class="stat-icon orange"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info"><span class="stat-label">Urgent</span><h3 class="stat-value" id="statUrgent">—</h3></div>
+            <i data-lucide="alert-circle" class="stat-icon red"></i>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info"><span class="stat-label">Delivered</span><h3 class="stat-value" id="statDelivered">—</h3></div>
+            <i data-lucide="check-circle-2" class="stat-icon green"></i>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="filters-bar">
+          <div class="search-input-wrapper">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" class="search-input" id="nurseSearch" placeholder="Search requests…">
+          </div>
+        </div>
+
+        <!-- Requests list -->
+        <div class="requests-list" id="requestsList"></div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/mock-data.js"></script>
+  <script src="../js/script.js"></script>
+  <script>
+    // Nurse sees only "her" requests (first 5 for demo)
+    const nurseEmail = 'nurse.ali@hospital.com';
+    const myRequests = MOCK.requests.slice(0, 6); // demo: show first 6
+
+    const statusColors = {
+      Requested:'#f97316', Collected:'#3b82f6', Cleaned:'#06b6d4',
+      Sterilized:'#6366f1', Packed:'#a855f7', Delivered:'#10b981'
+    };
+
+    function etaMins(req) {
+      const order = ['Requested','Collected','Cleaned','Sterilized','Packed','Delivered'];
+      return Math.max(0, (order.length - 1 - order.indexOf(req.status)) * 20);
+    }
+    function fmtEta(m) { return m === 0 ? 'Delivered' : m < 60 ? `~${m} min` : `~${(m/60).toFixed(1)} hr`; }
+
+    function renderList(reqs) {
+      const el = document.getElementById('requestsList');
+      if (!reqs.length) {
+        el.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
+          <i data-lucide="inbox" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
+          <p>No active requests. Create your first request above.</p></div>`;
+        lucide.createIcons(); return;
+      }
+      el.innerHTML = reqs.map(req => {
+        const color = statusColors[req.status] || '#64748b';
+        const eta   = etaMins(req);
+        return `
+        <a href="nurse-request-details.html?id=${req.id}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
+          <div class="req-header">
+            <div class="req-title-group">
+              <h4 class="req-id">REQ-${String(req.id).padStart(4,'0')}</h4>
+              ${req.priority==='Urgent'
+                ? '<span class="pill pill-urgent">Urgent</span>'
+                : '<span class="pill pill-normal">Normal</span>'}
+            </div>
+            <span class="pill" style="background:${color}20;color:${color};border:1px solid ${color}40;border-radius:999px;padding:2px 10px;font-size:.78rem;">${req.status}</span>
+          </div>
+          <div class="req-body">
+            <p class="req-ward"><i data-lucide="map-pin"></i> ${req.department}</p>
+            <div class="req-instruments">
+              <span class="instruments-label">Instruments:</span>
+              <div class="instruments-tags">${req.items.map(i => `<span class="tag-instrument">${i}</span>`).join('')}</div>
+            </div>
+          </div>
+          <div class="req-footer" style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;padding-top:.75rem;">
+            <span class="submit-time"><i data-lucide="clock" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> ${req.submitted_at}</span>
+            ${req.status !== 'Delivered' ? `<span class="submit-time" style="color:#0d9488;font-weight:600;"><i data-lucide="timer" style="width:14px;height:14px;vertical-align:middle;margin-right:2px;"></i> ${fmtEta(eta)}</span>` : ''}
+          </div>
+        </a>`;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function markRead() {
+      MOCK.notifications.forEach(n => n.is_read = true);
+      document.getElementById('notifBanner').style.display = 'none';
+      document.getElementById('notifBadge').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('nurseSubtitle').textContent = 'Sara • General Ward';
+
+      // Stats (from nurse's view of all requests)
+      document.getElementById('statTotal').textContent     = myRequests.length;
+      document.getElementById('statInProgress').textContent= myRequests.filter(r => ['Collected','Cleaned','Sterilized','Packed'].includes(r.status)).length;
+      document.getElementById('statUrgent').textContent    = myRequests.filter(r => r.priority==='Urgent').length;
+      document.getElementById('statDelivered').textContent = myRequests.filter(r => r.status==='Delivered').length;
+
+      // Notifications
+      const unread = MOCK.notifications.filter(n => !n.is_read);
+      if (unread.length) {
+        document.getElementById('notifBanner').style.display = '';
+        document.getElementById('notifBadge').style.display = '';
+        document.getElementById('notifBadge').textContent = unread.length;
+        document.getElementById('notifList').innerHTML = unread.map(n =>
+          `<div style="font-size:.82rem;color:#166534;margin-top:.35rem;">• ${n.message} <span style="color:#94a3b8;">(${n.created_at.split(' ')[1]})</span></div>`
+        ).join('');
+      }
+
+      renderList(myRequests.filter(r => r.status !== 'Delivered'));
+
+      // Search
+      document.getElementById('nurseSearch').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        renderList(myRequests.filter(r => r.status !== 'Delivered').filter(r =>
+          `req-${String(r.id).padStart(4,'0')}`.includes(q) ||
+          r.status.toLowerCase().includes(q) ||
+          r.items.some(i => i.toLowerCase().includes(q))
+        ));
+      });
+    });
+  </script>
+</body>
+</html>

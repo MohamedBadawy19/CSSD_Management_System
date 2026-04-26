@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sterile Stock - Nurse Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/extended_styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-teal">
+    <nav class="dashboard-nav theme-dark-teal">
+      <div class="nav-brand">
+        <div class="nav-logo teal"><i data-lucide="package-check"></i></div>
+        <div class="nav-title"><h2>Sterile Stock</h2><p>Currently Packed &amp; Ready</p></div>
+      </div>
+      <div class="nav-actions">
+        <a href="nurse-dashboard.html" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+
+        <!-- Category filters -->
+        <div class="filters-bar" style="margin-bottom:1rem;">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:.8rem;color:#64748b;font-weight:600;">Filter by category:</span>
+            <button class="toggle-btn active" id="cat-All" onclick="filterCat('')">All</button>
+          </div>
+        </div>
+
+        <div class="detail-card list-card">
+          <div class="card-header pb-border">
+            <h4>Available Sterile Instruments <span style="color:#0d9488;" id="itemCount"></span></h4>
+          </div>
+          <div class="alert-list" id="stockList"><!-- JS --></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/mock-data.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    // Sterile = items with decent stock (current_stock >= 3 for demo)
+    const sterileItems = MOCK.inventory.filter(i => i.current_stock >= 3);
+    const categories   = [...new Set(sterileItems.map(i => i.category))];
+    let   activeCat    = '';
+
+    function filterCat(cat) {
+      activeCat = cat;
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`cat-${cat || 'All'}`).classList.add('active');
+      renderStock();
+    }
+
+    function renderStock() {
+      const items = activeCat ? sterileItems.filter(i => i.category === activeCat) : sterileItems;
+      document.getElementById('itemCount').textContent = `(${items.length} items)`;
+      const list = document.getElementById('stockList');
+      if (!items.length) {
+        list.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
+          <i data-lucide="package-x" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
+          <p>No sterile instruments in this category.</p></div>`;
+        lucide.createIcons(); return;
+      }
+      list.innerHTML = items.map(item => `
+        <div class="alert-list-item">
+          <div class="ali-main">
+            <div class="ali-title-bar">
+              <h4>${item.name}</h4>
+              <span class="pill" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;">Packed &amp; Ready</span>
+            </div>
+            <div class="ali-stats">
+              <div class="ali-stat"><span class="as-label">Category</span><span class="as-val">${item.category}</span></div>
+              <div class="ali-stat"><span class="as-label">Stock</span><span class="as-val" style="color:#0d9488;font-weight:600;">${item.current_stock}</span></div>
+            </div>
+          </div>
+        </div>`).join('');
+      lucide.createIcons();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Render category buttons
+      const filterBar = document.querySelector('.filters-bar > div');
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'toggle-btn';
+        btn.id = `cat-${cat}`;
+        btn.textContent = cat;
+        btn.onclick = () => filterCat(cat);
+        filterBar.appendChild(btn);
+      });
+      renderStock();
+    });
+  </script>
+</body>
+</html>

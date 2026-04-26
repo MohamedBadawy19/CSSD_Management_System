@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Details - CSSD</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/extended_styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="cssd-dashboard.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title">
+          <h2>Request Details</h2>
+          <p id="navReqId">REQ-0000</p>
+        </div>
+      </div>
+    </nav>
+
+    <main class="dashboard-main details-main">
+      <div class="container-center">
+
+        <!-- Summary -->
+        <div class="detail-card summary-card row-layout">
+          <div>
+            <h3>Request Summary</h3>
+            <div class="sg-grid-small">
+              <div class="sg-label"><i data-lucide="user"></i> Submitted by</div>
+              <div class="sg-value text-right" id="detailRequester">—</div>
+              <div class="sg-label"><i data-lucide="calendar"></i> Timestamp</div>
+              <div class="sg-value text-right" id="detailDate">—</div>
+              <div class="sg-label"><i data-lucide="building"></i> Department</div>
+              <div class="sg-value text-right" id="detailDept">—</div>
+            </div>
+          </div>
+          <div class="summary-pills-v">
+            <div class="sg-item-h">
+              <span class="sg-label"><i data-lucide="alert-circle"></i> Priority</span>
+              <span id="detailPriority" class="pill pill-normal">Normal</span>
+            </div>
+            <div class="sg-item-h">
+              <span class="sg-label"><i data-lucide="check-circle-2"></i> Current Status</span>
+              <span id="detailStatus" class="pill">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instruments + Technician -->
+        <div class="grid-2-col">
+          <div class="detail-card instruments-card">
+            <h3>Requested Instruments</h3>
+            <ul class="instrument-checklist" id="instrumentList"><!-- JS --></ul>
+          </div>
+
+          <div class="col-stack">
+            <div class="detail-card assigned-card">
+              <h3>Assigned Technician</h3>
+              <div class="technician-badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">
+                <div class="avatar" style="background:#3b82f6;color:white;"><i data-lucide="user-check"></i></div>
+                <div>
+                  <strong>sara@hospital.com</strong>
+                  <p>Current Processing Operator</p>
+                </div>
+              </div>
+            </div>
+            <div class="detail-card notes-card">
+              <h3>Notes</h3>
+              <div class="notes-box" id="detailNotes">No notes provided.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Horizontal Timeline -->
+        <div class="detail-card ht-card">
+          <h3>Processing Timeline</h3>
+          <div class="horizontal-timeline" id="timeline">
+            <!-- JS renders steps -->
+          </div>
+        </div>
+
+        <!-- Action footer -->
+        <div class="action-footer" id="actionFooter">
+          <!-- JS renders action buttons -->
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/mock-data.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    const STEPS = ['Requested','Collected','Cleaned','Sterilized','Packed','Delivered'];
+    const NEXT  = { Requested:'Collected', Collected:'Cleaned', Cleaned:'Sterilized', Sterilized:'Packed', Packed:'Delivered' };
+    const STEP_LABELS = ['Collected','Cleaned','Sterilized','Packed','Delivered'];
+    const statusColors = {
+      Requested:'#f97316', Collected:'#3b82f6', Cleaned:'#06b6d4',
+      Sterilized:'#6366f1', Packed:'#a855f7', Delivered:'#10b981'
+    };
+
+    function getReqId() {
+      const p = new URLSearchParams(location.search);
+      return parseInt(p.get('id') || '1');
+    }
+
+    function renderTimeline(currentStatus) {
+      const currentIdx = STEPS.indexOf(currentStatus);
+      return STEP_LABELS.map((label, i) => {
+        const stepIdx = i + 1; // collected = index 1 in STEPS
+        const completed = stepIdx < currentIdx || currentStatus === 'Delivered';
+        const current   = STEPS[stepIdx] === currentStatus;
+        return `
+        <div class="ht-node ${completed || current ? 'completed' : ''}">
+          <div class="node-circle">${i+1}</div>
+          <p>${label}</p>
+          ${current ? '<span class="ht-current">Current</span>' : ''}
+        </div>
+        ${i < STEP_LABELS.length - 1 ? `<div class="ht-line ${completed ? 'completed' : ''}"></div>` : ''}`;
+      }).join('');
+    }
+
+    function renderActions(req) {
+      const next = NEXT[req.status];
+      if (!next) return `<span style="color:#10b981;font-weight:600;">✓ Fully Delivered</span>`;
+
+      let actionBtn = '';
+      if (req.status === 'Cleaned') {
+        // needs batch select
+        const options = MOCK.batches.map(b =>
+          `<option value="${b.id}">Batch #${b.id} — ${b.method} (${b.temperature}°C)</option>`
+        ).join('');
+        actionBtn = `
+          <select id="batchSelect" class="form-input" style="flex:1;border:1px solid #cbd5e1;padding:.5rem;">
+            <option value="">— Select Sterilization Batch —</option>
+            ${options}
+          </select>
+          <button class="btn-primary" onclick="advanceStatus(${req.id},'Sterilized',true)">
+            <i data-lucide="check-circle-2"></i> Mark as Sterilized
+          </button>
+          <a href="cssd-batch-create.html" class="btn-outline" title="Create new batch"><i data-lucide="plus"></i></a>`;
+      } else {
+        const labels = { Requested:'Approve & Start Processing', Collected:'Mark as Cleaned',
+                         Sterilized:'Mark as Packed', Packed:'Mark as Delivered' };
+        actionBtn = `<button class="btn-primary flex-1" onclick="advanceStatus(${req.id},'${next}',false)">
+          <i data-lucide="check-circle-2"></i> ${labels[req.status]}
+        </button>`;
+      }
+      return `
+        ${actionBtn}
+        <button class="btn-danger-outline flex-1" onclick="deleteRequest(${req.id})">
+          <i data-lucide="trash-2"></i> Delete Request
+        </button>`;
+    }
+
+    function advanceStatus(id, newStatus, needsBatch) {
+      if (needsBatch) {
+        const sel = document.getElementById('batchSelect');
+        if (!sel || !sel.value) { alert('Please select a sterilization batch first.'); return; }
+      }
+      const req = MOCK.requests.find(r => r.id === id);
+      if (req) {
+        req.status = newStatus;
+        location.reload();
+      }
+    }
+
+    function deleteRequest(id) {
+      if (confirm('Are you sure you want to delete this request permanently?')) {
+        MOCK.requests = MOCK.requests.filter(r => r.id !== id);
+        location.href = 'cssd-dashboard.html';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const id  = getReqId();
+      const req = MOCK.requests.find(r => r.id === id) || MOCK.requests[0];
+
+      document.getElementById('navReqId').textContent     = `REQ-${String(req.id).padStart(4,'0')}`;
+      document.getElementById('detailRequester').textContent = req.requester;
+      document.getElementById('detailDate').textContent   = req.submitted_at;
+      document.getElementById('detailDept').textContent   = req.department;
+
+      const priEl = document.getElementById('detailPriority');
+      priEl.textContent = req.priority;
+      priEl.className   = req.priority === 'Urgent' ? 'pill pill-urgent' : 'pill pill-normal';
+
+      const stEl = document.getElementById('detailStatus');
+      stEl.textContent  = req.status;
+      stEl.style.background = (statusColors[req.status] || '#64748b') + '20';
+      stEl.style.color      = statusColors[req.status] || '#64748b';
+      stEl.style.border     = `1px solid ${(statusColors[req.status]||'#64748b')}40`;
+      stEl.style.borderRadius = '999px';
+      stEl.style.padding    = '2px 10px';
+      stEl.style.fontSize   = '.8rem';
+      stEl.style.fontWeight = '600';
+
+      document.getElementById('instrumentList').innerHTML = req.items.map(i =>
+        `<li><span>${i}</span><i data-lucide="check-circle-2" class="icon-green"></i></li>`
+      ).join('');
+
+      document.getElementById('timeline').innerHTML  = renderTimeline(req.status);
+      document.getElementById('actionFooter').innerHTML = renderActions(req);
+
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
