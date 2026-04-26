@@ -1,10 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nurse Dashboard - CSSD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -41,7 +43,7 @@
 
         <!-- Create request CTA -->
         <div class="action-header">
-          <a href="nurse-create-request.html" class="btn-create-request" style="text-decoration:none;">
+          <a href="{% url 'nurse_create_request' %}" class="btn-create-request" style="text-decoration:none;">
             <i data-lucide="plus"></i> Create New Request
             <span class="badge-pill">Quick Access</span>
           </a>
@@ -82,8 +84,8 @@
     </main>
   </div>
 
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/script.js"></script>
+  <script src="{% static 'mock-data.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
   <script>
     // Nurse sees only "her" requests (first 5 for demo)
     const nurseEmail = 'nurse.ali@hospital.com';
