@@ -10,4 +10,6 @@ urlpatterns = [
     path('dashboard/', views.dashboard_router, name='dashboard_router'),
     path('dashboard/cssd/', views.cssd_dashboard, name='cssd_dashboard'),
     path('dashboard/nurse/', views.nurse_dashboard, name='nurse_dashboard'),
+    # US-27: View Inventory Shortage Alerts
+    path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
 ]
