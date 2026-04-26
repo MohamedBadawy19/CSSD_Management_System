@@ -1,19 +1,12 @@
-<<<<<<< HEAD
 {% load static %}
-=======
->>>>>>> dev
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nurse Dashboard - CSSD</title>
-<<<<<<< HEAD
   <link rel="stylesheet" href="{% static 'styles.css' %}">
-  <link rel="stylesheet"href="{% static 'extended_styles.css' %}">
-=======
-  <link rel="stylesheet" href="styles.css">
->>>>>>> dev
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -50,11 +43,7 @@
 
         <!-- Create request CTA -->
         <div class="action-header">
-<<<<<<< HEAD
           <a href="{% url 'nurse_create_request' %}" class="btn-create-request" style="text-decoration:none;">
-=======
-          <a href="nurse-create-request.html" class="btn-create-request" style="text-decoration:none;">
->>>>>>> dev
             <i data-lucide="plus"></i> Create New Request
             <span class="badge-pill">Quick Access</span>
           </a>
@@ -95,15 +84,9 @@
     </main>
   </div>
 
-<<<<<<< HEAD
-  <script src="../static/mock-data.js"></script>
-  <script src="../static/script.js"></script>
-  <!-- <script>
-=======
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/script.js"></script>
+  <script src="{% static 'mock-data.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
   <script>
->>>>>>> dev
     // Nurse sees only "her" requests (first 5 for demo)
     const nurseEmail = 'nurse.ali@hospital.com';
     const myRequests = MOCK.requests.slice(0, 6); // demo: show first 6
@@ -119,9 +102,6 @@
     }
     function fmtEta(m) { return m === 0 ? 'Delivered' : m < 60 ? `~${m} min` : `~${(m/60).toFixed(1)} hr`; }
 
-<<<<<<< HEAD
-
-=======
     function renderList(reqs) {
       const el = document.getElementById('requestsList');
       if (!reqs.length) {
@@ -159,7 +139,6 @@
       }).join('');
       lucide.createIcons();
     }
->>>>>>> dev
 
     function markRead() {
       MOCK.notifications.forEach(n => n.is_read = true);
@@ -199,10 +178,6 @@
         ));
       });
     });
-<<<<<<< HEAD
-  </script> -->
-=======
   </script>
->>>>>>> dev
 </body>
 </html>
