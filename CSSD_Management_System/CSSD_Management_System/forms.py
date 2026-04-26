@@ -8,13 +8,19 @@ class EmailLoginForm(AuthenticationForm):
         'inactive': _('This account is inactive. Please contact the administrator.'),
     }
 
-    username = forms.EmailField(widget=forms.EmailInput(attrs={
-        'class': 'form-input',
+    username = forms.EmailField(label=_("Email"), widget=forms.EmailInput(attrs={
+        'autofocus': True,
+        'class': 'form-input form-control',
         'placeholder': 'Email',
         'id': 'inputEmail'
     }))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'form-input',
-        'placeholder': 'Password',
-        'id': 'password'
-    }))
+    password = forms.CharField(
+        label=_("Password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'current-password',
+            'class': 'form-input form-control',
+            'placeholder': 'Password',
+            'id': 'password'
+        }),
+    )
