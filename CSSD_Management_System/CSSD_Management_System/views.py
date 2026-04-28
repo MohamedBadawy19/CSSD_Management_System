@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import  login, logout
 from django.contrib.auth.decorators import login_required
 from .forms import EmailLoginForm
-from django.http import HttpResponse
+from django.http import HttpResponse , HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from .models import InstrumentSet , RequestItem , InstrumentRequest , InventoryItem
+import datetime 
 @csrf_exempt
 def login_view(request):
     # Determine which template to show based on a URL parameter
@@ -55,9 +56,42 @@ def dashboard_router(request):
 
 @login_required
 def nurse_dashboard(request):
-    
-    return render(request , 'nurse-dashboard.html' )
+    final_requests = []
 
+    requests = InstrumentRequest.objects.filter(requester = request.user)
+    
+    for request in requests:
+        instruments = RequestItem.objects.filter(request = request)
+        priority = request.priority
+        status = request.status
+        department = request.department
+        notes = request.notes
+        id = request.id
+        request_dict = {
+            'id' : id,
+            'instruments' : instruments,
+            'priority' : priority,
+            'status' : status,
+            'department' : department,
+            'notes' : notes,
+            
+        }
+        final_requests.append(request_dict)
+
+    total = len(requests)
+    in_progress = len(requests.filter(status__in=['Collected','Cleaned','Sterilized','Packed']))
+    urgent = len(requests.filter(priority='Urgent'))
+    delivered = len(requests.filter(priority='Delivered'))
+
+    context = {
+        'requests': final_requests,
+        'total': total,
+        'in_progress': in_progress,
+        'urgent': urgent,
+        'delivered': delivered,
+    }
+
+    return render(request , 'nurse-dashboard.html'  , context)
 def get_instruments():
     instruments = []
     for instrument in InventoryItem.objects.all():
@@ -91,7 +125,8 @@ def save_instrument_request(request):
             requester = request.user,
             priority = priority,
             department = request.user.department,
-            notes = notes
+            notes = notes,
+            submitted_at = datetime.datetime.now()
         )
 
         for instrument in instruments:
@@ -109,3 +144,19 @@ def save_instrument_request(request):
             database_instrument.current_stock -= quantity
             database_instrument.save()
     return redirect('nurse_create_request')
+def nurse_request_details(request , request_id):
+    
+    
+    instrument_request = InstrumentRequest.objects.get(id = request_id)
+    if request.user == instrument_request.requester:
+
+        status = ['Requested' , 'Collected' , 'Cleaned' , 'Sterilized' , 'Packed' , 'Delivered']
+        request_dict = {
+                'req' : instrument_request,
+                'status_order' : status,
+                'current_status_index' : status.index(instrument_request.status) ,
+                'items' :  RequestItem.objects.filter(request = instrument_request)
+            }
+        return render(request , 'nurse-request-details.html' , request_dict)
+
+    return HttpResponseForbidden("Access Denined")
