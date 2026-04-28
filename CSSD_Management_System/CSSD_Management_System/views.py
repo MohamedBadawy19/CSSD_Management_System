@@ -184,6 +184,7 @@ def cssd_update_request_status(request, pk, status):
         'Cleaned': 'Collected',
         'Sterilized': 'Cleaned',
         'Packed': 'Sterilized',
+        'Delivered': 'Packed',
     }
 
     if status not in valid_transitions:
@@ -211,6 +212,8 @@ def cssd_update_request_status(request, pk, status):
         req.cleaned_at = timezone.now()
     elif status == 'Packed':
         req.packed_at = timezone.now()
+    elif status == 'Delivered':
+        req.delivered_at = timezone.now()
 
     req.status = status
     req.last_operator = request.user
