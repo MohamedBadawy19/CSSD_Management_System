@@ -17,6 +17,6 @@ urlpatterns = [
     path('dashboard/cssd/', views.cssd_dashboard, name='cssd_dashboard'),
     path('dashboard/cssd/request/<int:pk>/', views.cssd_request_detail, name='cssd_request_detail'),
 
-    # US-17: Mark as Collected
+    # US-18: Mark as Cleaned
     path('dashboard/cssd/request/<int:pk>/update/<str:status>/', views.cssd_update_request_status, name='cssd_update_request_status'),
 ]

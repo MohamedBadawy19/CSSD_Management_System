@@ -1,1 +1,1 @@
-# Make tests/ a proper Python package
+"""Test package for branch-scoped CSSD workflow coverage."""
