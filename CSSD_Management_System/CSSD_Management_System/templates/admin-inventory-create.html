@@ -1,0 +1,116 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Instrument - Admin</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'cssd_dashboard' %}" class="btn-back-icon">
+          <i data-lucide="arrow-left"></i>
+        </a>
+        <div class="nav-title">
+          <h2>Inventory Management</h2>
+          <p>Register New Instrument Set</p>
+        </div>
+      </div>
+    </nav>
+
+    <main class="dashboard-main details-main">
+      <div class="container-center">
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" 
+                     style="background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="alert-circle"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="detail-card">
+          <div class="card-header" style="margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+            <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="plus-circle" class="icon-blue"></i>
+                Instrument Specifications
+            </h3>
+          </div>
+
+          <form method="POST" class="sg-form">
+            {% csrf_token %}
+            
+            <div class="grid-2-col">
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="sg-label">Set Name</label>
+                <input type="text" name="name" class="form-input" placeholder="e.g. Major Surgical Set" required 
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                {% if form.name.errors %}
+                   <p style="color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem;">{{ form.name.errors.0 }}</p>
+                {% endif %}
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="sg-label">Type / Category</label>
+                <select name="category" class="form-input" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;" required>
+                  <option value="">-- Select Category --</option>
+                  <option value="General">General</option>
+                  <option value="Orthopedic">Orthopedic</option>
+                  <option value="Cardiac">Cardiac</option>
+                  <option value="Neurology">Neurology</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="sg-label">Initial Quantity</label>
+                <input type="number" name="current_stock" class="form-input" min="0" value="0" required
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="sg-label">Low Stock Threshold</label>
+                <input type="number" name="min_threshold" class="form-input" min="1" value="3" required
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 2rem;">
+              <label class="sg-label">Description / State Note</label>
+              <textarea name="notes" class="notes-box" placeholder="Optional details about this instrument set..." 
+                        style="width: 100%; min-height: 100px; border: 1px solid #cbd5e1;"></textarea>
+            </div>
+
+            <div class="action-footer" style="padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+              <button type="submit" class="btn-primary flex-1" style="width: 100%; border: none; cursor: pointer;">
+                <i data-lucide="save"></i> Save Instrument Set
+              </button>
+              <a href="{% url 'cssd_dashboard' %}" class="btn-outline" style="text-decoration:none; text-align: center;">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <div class="detail-card assigned-card" style="margin-top: 1.5rem;">
+            <div class="technician-badge" style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+              <div class="avatar" style="background: #e2e8f0;"><i data-lucide="info"></i></div>
+              <div>
+                <strong>Automatic Assignment</strong>
+                <p>New sets will be initialized with the state <b>"Unassigned"</b> by default.</p>
+              </div>
+            </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

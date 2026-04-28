@@ -1,0 +1,89 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Report</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <div class="nav-title"><h2>Daily Sterilization Report</h2><p>Hospital Administration</p></div>
+      </div>
+      <div class="nav-actions">
+        <a href="{% url 'hospital_audit' %}" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">Audit History</a>
+        <a href="{% url 'logout' %}" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="dashboard-container">
+
+        <!-- Date picker -->
+        <form method="GET" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+          <label style="font-size:.8rem;font-weight:600;color:#64748b;">Select Date:</label>
+          <input type="date" name="date" value="{{ date_str }}" class="form-input" style="width:auto;padding:6px 10px;">
+          <button type="submit" class="btn-primary" style="padding:7px 16px;font-size:.85rem;">View Report</button>
+          <a href="?date={{ date_str }}&export=pdf" class="btn-outline" style="padding:7px 16px;font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:.4rem;">
+            <i data-lucide="download" style="width:14px;height:14px;"></i> Export PDF
+          </a>
+        </form>
+
+        <div class="cssd-stats-grid">
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">Total Batches</span><i data-lucide="flask-conical" class="stat-icon-small blue"></i></div>
+            <h3 class="stat-value">{{ total_batches }}</h3>
+            <p class="stat-desc">Processed on {{ report_date }}</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">Instruments Sterilized</span><i data-lucide="check-circle-2" class="stat-icon-small green"></i></div>
+            <h3 class="stat-value">{{ total_sterilized }}</h3>
+            <p class="stat-desc">Requests completed</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">Operators Active</span><i data-lucide="users" class="stat-icon-small orange"></i></div>
+            <h3 class="stat-value">{{ operators|length }}</h3>
+            <p class="stat-desc">Technicians on shift</p>
+          </div>
+        </div>
+
+        <div class="detail-card list-card" style="padding:0;overflow:hidden;margin-top:1.25rem;">
+          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Batch Log ΓÇö {{ report_date }}</h4></div>
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Batch</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Operator</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Temp</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Duration</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Status</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in batches %}
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 16px;font-weight:600;color:#2563eb;">Batch #{{ b.id }}</td>
+                <td style="padding:10px 16px;">{{ b.operator.email }}</td>
+                <td style="padding:10px 16px;">{{ b.temperature }}┬░C</td>
+                <td style="padding:10px 16px;">{{ b.cycle_duration }} min</td>
+                <td style="padding:10px 16px;"><span class="pill pill-normal">{{ b.status }}</span></td>
+                <td style="padding:10px 16px;color:#64748b;">{{ b.created_at|date:'H:i' }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8;">No batches recorded for this date.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
