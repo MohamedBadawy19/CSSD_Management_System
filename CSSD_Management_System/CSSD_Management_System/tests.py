@@ -194,6 +194,16 @@ class StoryTests(TestCase):
         self.assertEqual(response.context['stat_pending'], 1)
         self.assertEqual(response.context['stat_alerts'], 1)
 
+    def test_cssd_inventory_alerts_page(self):
+        self.client.login(email='cssd@example.com', password='password123')
+        response = self.client.get(reverse('cssd_inventory_alerts'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('alert_items', response.context)
+
+        alert_names = [item.name for item in response.context['alert_items']]
+        self.assertIn(self.inventory_item_low.name, alert_names)
+        self.assertNotIn(self.inventory_item.name, alert_names)
+
     # US-17 — View Active Requests (Nurse Dashboard)
     def test_nurse_dashboard_active_requests(self):
         self.client.login(email='nurse@example.com', password='password123')
@@ -207,3 +217,75 @@ class StoryTests(TestCase):
     def test_estimated_completion_time(self):
         eta = self.request1.get_eta()
         self.assertIn("Ready by ~", eta)
+
+
+class BugRegressionTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.nurse = CustomUser.objects.create_user(
+            email='bug-nurse@example.com',
+            password='password123',
+            role='Department Nurse',
+            department='ER'
+        )
+        self.scalpel = InventoryItem.objects.create(
+            name='Bug Scalpel',
+            category='Surgical',
+            current_stock=5,
+            min_threshold=2
+        )
+        self.forceps = InventoryItem.objects.create(
+            name='Bug Forceps',
+            category='Surgical',
+            current_stock=1,
+            min_threshold=2
+        )
+
+    def test_save_instrument_request_requires_authenticated_user(self):
+        response = self.client.post(reverse('save_instrument_request'), {
+            'instruments': ['Bug Scalpel'],
+            'quantity_Bug Scalpel': 1,
+            'priority': 'Normal',
+            'notes': 'anonymous request should not succeed'
+        })
+
+        self.assertNotEqual(response.status_code, 500)
+        self.assertEqual(InstrumentRequest.objects.count(), 0)
+        self.scalpel.refresh_from_db()
+        self.assertEqual(self.scalpel.current_stock, 5)
+
+    def test_insufficient_stock_does_not_create_request(self):
+        self.client.login(email='bug-nurse@example.com', password='password123')
+
+        response = self.client.post(reverse('save_instrument_request'), {
+            'instruments': ['Bug Forceps'],
+            'quantity_Bug Forceps': 3,
+            'priority': 'Urgent',
+            'notes': 'quantity exceeds stock'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(InstrumentRequest.objects.count(), 0)
+        self.assertEqual(RequestItem.objects.count(), 0)
+        self.forceps.refresh_from_db()
+        self.assertEqual(self.forceps.current_stock, 1)
+
+    def test_multi_item_request_rolls_back_when_any_item_is_unavailable(self):
+        self.client.login(email='bug-nurse@example.com', password='password123')
+
+        response = self.client.post(reverse('save_instrument_request'), {
+            'instruments': ['Bug Scalpel', 'Bug Forceps'],
+            'quantity_Bug Scalpel': 2,
+            'quantity_Bug Forceps': 3,
+            'priority': 'Urgent',
+            'notes': 'request should be atomic'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(InstrumentRequest.objects.count(), 0)
+        self.assertEqual(RequestItem.objects.count(), 0)
+
+        self.scalpel.refresh_from_db()
+        self.forceps.refresh_from_db()
+        self.assertEqual(self.scalpel.current_stock, 5)
+        self.assertEqual(self.forceps.current_stock, 1)

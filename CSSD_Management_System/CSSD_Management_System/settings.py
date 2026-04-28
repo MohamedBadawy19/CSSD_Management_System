@@ -128,3 +128,5 @@ LOGOUT_REDIRECT_URL = 'home'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'CSSD_Management_System', 'static'),
 ]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

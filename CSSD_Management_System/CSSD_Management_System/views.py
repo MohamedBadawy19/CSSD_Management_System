@@ -5,6 +5,8 @@ from .forms import EmailLoginForm
 from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.db import transaction
+from django.db.models import F
 from .models import (
     InstrumentSet, RequestItem, InstrumentRequest,
     InventoryItem, Notification, SterilizationBatch
@@ -131,6 +133,24 @@ def nurse_dashboard(request):
     return render(request, 'nurse-dashboard.html', context)
 
 
+@login_required
+def cssd_inventory_alerts(request):
+    low_stock_items = InventoryItem.objects.filter(
+        current_stock__lte=F('min_threshold')
+    ).order_by('current_stock', 'name')
+
+    critical_items = low_stock_items.filter(current_stock=0)
+    low_items = low_stock_items.filter(current_stock__gt=0)
+
+    context = {
+        'alert_items': low_stock_items,
+        'total_alerts': low_stock_items.count(),
+        'critical_alerts': critical_items.count(),
+        'low_alerts': low_items.count(),
+    }
+    return render(request, 'cssd-inventory-alerts.html', context)
+
+
 def get_instruments():
     instruments = []
     for instrument in InventoryItem.objects.all():
@@ -149,23 +169,17 @@ def nurse_create_request(request):
     return render(request, 'nurse-create-request.html', {'instruments': get_instruments()})
 
 
+@login_required
 @csrf_exempt
 def save_instrument_request(request):
     if request.method == 'POST':
         instruments = request.POST.getlist('instruments')
         priority    = request.POST.get('priority')
         notes       = request.POST.get('notes')
-
-        new_request = InstrumentRequest.objects.create(
-            requester=request.user,
-            priority=priority,
-            department=request.user.department,
-            notes=notes,
-            submitted_at=datetime.datetime.now(),
-        )
+        selected_items = []
 
         for instrument in instruments:
-            quantity            = int(request.POST.get("quantity_" + instrument))
+            quantity = int(request.POST.get("quantity_" + instrument))
             database_instrument = InventoryItem.objects.get(name=instrument)
 
             if quantity > database_instrument.current_stock:
@@ -174,13 +188,25 @@ def save_instrument_request(request):
                     'warning': f'instrument {instrument} has current_stock : {database_instrument.current_stock}',
                 })
 
-            RequestItem.objects.create(
-                request=new_request,
-                inventory_item=database_instrument,
-                quantity=quantity,
+            selected_items.append((database_instrument, quantity))
+
+        with transaction.atomic():
+            new_request = InstrumentRequest.objects.create(
+                requester=request.user,
+                priority=priority,
+                department=request.user.department,
+                notes=notes,
+                submitted_at=datetime.datetime.now(),
             )
-            database_instrument.current_stock -= quantity
-            database_instrument.save()
+
+            for database_instrument, quantity in selected_items:
+                RequestItem.objects.create(
+                    request=new_request,
+                    inventory_item=database_instrument,
+                    quantity=quantity,
+                )
+                database_instrument.current_stock -= quantity
+                database_instrument.save()
 
     return redirect('nurse_create_request')
 

@@ -13,6 +13,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_router, name='dashboard_router'),
+    path('cssd_inventory_alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
 
     # ── Nurse views ───────────────────────────────────────────────
     path('nurse_dashboard/', views.nurse_dashboard, name='nurse_dashboard'),

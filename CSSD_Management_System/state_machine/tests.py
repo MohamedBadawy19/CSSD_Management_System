@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from department_requests.models import InstrumentRequest
+from CSSD_Management_System.models import InstrumentRequest
 
 
 class StateMachineTests(TestCase):
@@ -27,7 +27,7 @@ class StateMachineTests(TestCase):
         )
         self.client.login(email="cssd@example.com", password="password123")
 
-    @patch("state_machine.views.Notification.objects.create")
+    @patch("CSSD_Management_System.views_us07_10.Notification.objects.create")
     def test_mark_collected_sends_notification(self, mocked_notify):
         response = self.client.post(reverse("mark_collected", args=[self.request_obj.id]))
         self.assertEqual(response.status_code, 302)
