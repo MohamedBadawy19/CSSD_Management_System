@@ -1,36 +1,36 @@
-# US-18: Mark Instrument Request as Cleaned
-# This branch isolates only the "Mark as Cleaned" state transition.
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from .forms import EmailLoginForm
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed
+from django.views.decorators.csrf import csrf_exempt
+from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem, Notification
+from .decorators import cssd_staff_required
 from django.contrib import messages
-from django.http import HttpResponse
 from django.utils import timezone
 
-from .forms import EmailLoginForm, InventoryItemForm
-from .decorators import cssd_staff_required
-from .models import InstrumentRequest, RequestItem, InventoryItem, Notification
 
-
-def _notify_nurse(request_obj, message):
-    Notification.objects.create(recipient=request_obj.requester, request=request_obj, message=message)
-
-
+@csrf_exempt
 def login_view(request):
     role_type = request.GET.get('role', 'staff')
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
+
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
+        print(form.is_valid())
         if form.is_valid():
-            login(request, form.get_user())
+            user = form.get_user()
+            login(request, user)
             return redirect('dashboard_router')
     else:
         form = EmailLoginForm()
+
     return render(request, template_name, {'form': form})
 
 
 def home(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard_router')
     return render(request, 'index.html')
 
 
@@ -42,11 +42,103 @@ def logout_view(request):
 @login_required
 def dashboard_router(request):
     role = request.user.role
+
     if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
-        return redirect('cssd_dashboard')
-    elif role == 'Department Nurse':
-        return redirect('nurse_dashboard')
-    return HttpResponse(f"Role '{role}' not recognized.", status=403)
+        return render(request, 'cssd-dashboard.html')
+    if role == 'Department Nurse':
+        return render(request, 'nurse-dashboard.html')
+    return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
+
+
+@login_required
+def nurse_dashboard(request):
+    final_requests = []
+
+    requests = InstrumentRequest.objects.filter(requester=request.user)
+
+    for request_obj in requests:
+        request_dict = {
+            'id': request_obj.id,
+            'instruments': RequestItem.objects.filter(request=request_obj),
+            'priority': request_obj.priority,
+            'status': request_obj.status,
+            'department': request_obj.department,
+            'notes': request_obj.notes,
+        }
+        final_requests.append(request_dict)
+
+    context = {
+        'requests': final_requests,
+        'total': len(requests),
+        'in_progress': len(requests.filter(status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed'])),
+        'urgent': len(requests.filter(priority='Urgent')),
+        'delivered': len(requests.filter(priority='Delivered')),
+    }
+
+    return render(request, 'nurse-dashboard.html', context)
+
+
+def get_instruments():
+    instruments = []
+    for instrument in InventoryItem.objects.all():
+        instruments.append({
+            'name': instrument.name,
+            'category': instrument.category,
+            'current_stock': instrument.current_stock,
+            'min_threshold': instrument.min_threshold,
+        })
+    return instruments
+
+
+@login_required
+def nurse_create_request(request):
+    return render(request, 'nurse-create-request.html', {'instruments': get_instruments()})
+
+
+@csrf_exempt
+def save_instrument_request(request):
+    if request.method == 'POST':
+        instruments = request.POST.getlist('instruments')
+        priority = request.POST.get('priority')
+        notes = request.POST.get('notes')
+
+        new_request = InstrumentRequest.objects.create(
+            requester=request.user,
+            priority=priority,
+            department=request.user.department,
+            notes=notes,
+        )
+
+        for instrument in instruments:
+            quantity = int(request.POST.get("quantity_" + instrument))
+            database_instrument = InventoryItem.objects.get(name=instrument)
+
+            if quantity > database_instrument.current_stock:
+                return render(
+                    request,
+                    'nurse-create-request.html',
+                    {
+                        'instruments': get_instruments(),
+                        'warning': f'instrument {instrument} has current_stock : {database_instrument.current_stock}',
+                    },
+                )
+
+            RequestItem.objects.create(
+                request=new_request,
+                inventory_item=database_instrument,
+                quantity=quantity,
+            )
+            database_instrument.current_stock -= quantity
+            database_instrument.save()
+    return redirect('nurse_create_request')
+
+
+def _notify_nurse(request_obj, message):
+    Notification.objects.create(
+        recipient=request_obj.requester,
+        request=request_obj,
+        message=message,
+    )
 
 
 @login_required
@@ -75,17 +167,17 @@ def cssd_request_detail(request, pk):
     return render(request, 'cssd-request-details.html', {'req': req, 'batches': []})
 
 
-# ---------------------------------------------------------------------------
-# US-18: Mark as Cleaned  ← FEATURE
-# ---------------------------------------------------------------------------
-
 @login_required
 @cssd_staff_required
 def cssd_update_request_status(request, pk, status):
     """
-    US-18: Allows a CSSD technician to mark a Collected InstrumentRequest as Cleaned.
-    Only the Collected → Cleaned transition is permitted in this branch.
+    US-18: Allows a CSSD technician to mark an InstrumentRequest as Cleaned.
+    Only the Collected -> Cleaned transition is permitted in this branch.
+    Only POST requests are accepted; GET returns 405.
     """
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
     req = get_object_or_404(InstrumentRequest, pk=pk)
 
     if status != 'Cleaned':
@@ -105,59 +197,16 @@ def cssd_update_request_status(request, pk, status):
     return redirect('cssd_request_detail', pk=pk)
 
 
-@login_required
-def nurse_dashboard(request):
-    all_requests = InstrumentRequest.objects.filter(requester=request.user).order_by('-submitted_at')
-    unread = Notification.objects.filter(recipient=request.user, is_read=False).order_by('-created_at')
-    context = {
-        'nurse_name': request.user.email.split('@')[0].capitalize(),
-        'nurse_ward': getattr(request.user, 'department', 'General Ward'),
-        'stats': {
-            'total': all_requests.count(),
-            'in_progress': all_requests.filter(status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']).count(),
-            'urgent': all_requests.filter(priority='Urgent').count(),
-            'delivered': all_requests.filter(status='Delivered').count(),
-        },
-        'requests': all_requests.exclude(status='Delivered'),
-        'notifications': unread,
-        'notif_count': unread.count(),
-    }
-    return render(request, 'nurse-dashboard.html', context)
+def nurse_request_details(request, request_id):
+    instrument_request = InstrumentRequest.objects.get(id=request_id)
+    if request.user == instrument_request.requester:
+        status = ['Requested', 'Collected', 'Cleaned', 'Sterilized', 'Packed', 'Delivered']
+        request_dict = {
+            'req': instrument_request,
+            'status_order': status,
+            'current_status_index': status.index(instrument_request.status),
+            'items': RequestItem.objects.filter(request=instrument_request),
+        }
+        return render(request, 'nurse-request-details.html', request_dict)
 
-
-@login_required
-def nurse_create_request(request):
-    instruments = InventoryItem.objects.all().order_by('category', 'name')
-    if request.method == 'POST':
-        priority = request.POST.get('priority', 'Normal')
-        notes = request.POST.get('notes', '')
-        valid_items, has_error = [], False
-        for item in instruments:
-            qty_val = request.POST.get(f'quantity_{item.id}')
-            if qty_val and qty_val.isdigit():
-                qty = int(qty_val)
-                if qty > 0:
-                    if qty > item.current_stock:
-                        messages.error(request, f"Insufficient stock for {item.name}.")
-                        has_error = True
-                    else:
-                        valid_items.append((item, qty))
-        if not valid_items and not has_error:
-            messages.warning(request, "Select at least one instrument.")
-            has_error = True
-        if has_error:
-            return render(request, 'nurse-create-request.html', {
-                'instruments': instruments, 'priority': priority, 'notes': notes
-            })
-        new_req = InstrumentRequest.objects.create(
-            requester=request.user,
-            department=getattr(request.user, 'department', 'General Ward'),
-            priority=priority, status='Requested', notes=notes,
-        )
-        for item, qty in valid_items:
-            item.current_stock -= qty
-            item.save()
-            RequestItem.objects.create(request=new_req, inventory_item=item, quantity=qty)
-        messages.success(request, f'Request REQ-{new_req.id:04d} submitted.')
-        return redirect('nurse_dashboard')
-    return render(request, 'nurse-create-request.html', {'instruments': instruments})
+    return HttpResponseForbidden("Access Denined")

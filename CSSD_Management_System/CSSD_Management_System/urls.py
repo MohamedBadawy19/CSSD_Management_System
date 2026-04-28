@@ -8,10 +8,15 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_router, name='dashboard_router'),
+    path('nurse_dashboard/' , views.nurse_dashboard , name = 'nurse_dashboard'),
+    path('nurse_create_request/' , views.nurse_create_request , name='nurse_create_request'),
+    path('save_instrument_request/' , views.save_instrument_request , name ='save_instrument_request'),
+    path('nurse_request_details/<int:request_id>/' , views.nurse_request_details , name = 'nurse_request_details'),
+
+    # CSSD infrastructure
     path('dashboard/cssd/', views.cssd_dashboard, name='cssd_dashboard'),
     path('dashboard/cssd/request/<int:pk>/', views.cssd_request_detail, name='cssd_request_detail'),
+
     # US-18: Mark as Cleaned
     path('dashboard/cssd/request/<int:pk>/update/<str:status>/', views.cssd_update_request_status, name='cssd_update_request_status'),
-    path('dashboard/nurse/', views.nurse_dashboard, name='nurse_dashboard'),
-    path('dashboard/nurse/create/', views.nurse_create_request, name='nurse_create_request'),
 ]
