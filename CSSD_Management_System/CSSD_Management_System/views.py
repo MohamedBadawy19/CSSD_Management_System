@@ -6,10 +6,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotAllowed
 from django.utils import timezone
 
-from .forms import EmailLoginForm, SterilizationBatchForm, InventoryItemForm
+from .forms import EmailLoginForm, SterilizationBatchForm
 from .decorators import cssd_staff_required
 from .models import InstrumentRequest, RequestItem, InventoryItem, SterilizationBatch, Notification
 
@@ -89,6 +89,9 @@ def cssd_update_request_status(request, pk, status):
     Requires a valid SterilizationBatch to be linked before transition.
     Only the Cleaned → Sterilized transition is permitted in this branch.
     """
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
     req = get_object_or_404(InstrumentRequest, pk=pk)
 
     if status != 'Sterilized':
