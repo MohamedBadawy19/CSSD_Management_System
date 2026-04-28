@@ -1,65 +1,54 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Instrument Request</title>
+  <title>New Instrument Request - Nurse Portal</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
   <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="dashboard-wrapper theme-teal">
-    <!-- Navbar -->
     <nav class="dashboard-nav theme-dark-teal">
       <div class="nav-brand">
-        <div class="nav-logo teal">
-          <i data-lucide="stethoscope"></i>
-        </div>
-        <div class="nav-title">
-          <h2>New Instrument Request</h2>
-          <p>Submit request to CSSD</p>
-        </div>
+        <div class="nav-logo teal"><i data-lucide="stethoscope"></i></div>
+        <div class="nav-title"><h2>New Instrument Request</h2><p>Submit request to CSSD</p></div>
       </div>
       <div class="nav-actions">
-        <a href="{% url 'nurse_dashboard' %}" class="btn-back">
-          <i data-lucide="arrow-left"></i> Back to Dashboard
-        </a>
+        <a href="{% url 'nurse_dashboard' %}" class="btn-back"><i data-lucide="arrow-left"></i> Back to Dashboard</a>
       </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="dashboard-main form-main">
       <div class="container-center form-container">
-        {% if messages %}
-            <div class="messages-container" style="margin-bottom: 1.5rem;">
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" style="padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c;">
-                        <strong>ΓÜá∩╕Å Alert:</strong> {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
+
+        {% if warning %}
+        <div id="errorBanner" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#b91c1c;">
+          ⚠ {{ warning }}
+        </div>
         {% endif %}
-        <form method="POST" action="{% url 'nurse_create_request' %}">
+        <div id="successBanner" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;"></div>
+
+        <form id="createForm" method="post" action="{% url 'save_instrument_request' %}">
           {% csrf_token %}
-          
+          <!-- Priority -->
           <div class="form-section">
             <label class="form-label">PRIORITY LEVEL</label>
             <div class="radio-group">
               <label class="radio-label">
                 <input type="radio" name="priority" value="Normal" checked>
-                <span class="custom-radio active-blue"></span>
-                Normal
+                <span class="custom-radio active-blue"></span> Normal
               </label>
               <label class="radio-label">
                 <input type="radio" name="priority" value="Urgent">
-                <span class="custom-radio red"></span>
-                Urgent
+                <span class="custom-radio red"></span> Urgent
               </label>
             </div>
           </div>
 
+          <!-- Instrument table -->
           <div class="form-section">
             <label class="form-label">SELECT INSTRUMENTS</label>
             <div class="instrument-table">
@@ -68,131 +57,119 @@
                 <div class="it-col-status">AVAILABILITY</div>
                 <div class="it-col-qty">QUANTITY</div>
               </div>
-              
-              <div class="it-body">
-                {% for item in instruments %}
-                <div class="it-row" id="row_{{ item.id }}">
-                  <div class="it-col-main">
-                    <label class="checkbox-label">
-                      <input type="checkbox" class="instrument-cb" data-id="{{ item.id }}">
-                      <span class="custom-cb"></span>
-                      {{ item.name }}
-                    </label>
-                  </div>
-                  <div class="it-col-status">
-                    <span class="pill pill-light-{{ item.status|lower }}">{{ item.status }}</span>
-                  </div>
-                  <div class="it-col-qty">
-                    <span class="qty-dash" id="dash_{{ item.id }}">ΓÇö</span>
-                    <div class="qty-stepper hidden" id="stepper_{{ item.id }}">
-                      <button type="button" class="stepper-btn minus" data-id="{{ item.id }}"><i data-lucide="minus"></i></button>
-                      <input type="hidden" name="quantity_{{ item.id }}" id="input_{{ item.id }}" value="0">
-                      <span class="qty-display" id="display_{{ item.id }}">1</span>
-                      <button type="button" class="stepper-btn plus" data-id="{{ item.id }}"><i data-lucide="plus"></i></button>
-                    </div>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
+              <div class="it-body" id="instrumentBody"><!-- JS --></div>
             </div>
           </div>
+          <div class="it-body">
+          {% for item in instruments %}
+          <div class="it-row">
+            
+            <!-- Instrument name -->
+            <div class="it-col-main">
+              <label class="checkbox-label">
+                <input type="checkbox" name="instruments" value="{{ item.name }}">
+                <span class="custom-cb"></span>
+                {{ item.name }}
+              </label>
+            </div>
 
-          <div class="selection-banner hidden" id="selection-banner">
-            <strong><span id="sel-inst">1</span> instrument(s) selected &bull; <span id="sel-total">1</span> total items</strong>
+            <!-- Availability -->
+            <div class="it-col-status">
+              {% if item.current_stock == 0 %}
+                <span class="pill pill-urgent">Out of Stock ({{ item.current_stock }})</span>
+              {% elif item.current_stock < 3 %}
+                <span class="pill pill-normal">Low Stock ({{ item.current_stock }})</span>
+              {% else %}
+                <span class="pill pill-outline-delivered">Available ({{ item.current_stock }})</span>
+              {% endif %}
+            </div>
+
+            <!-- Quantity input -->
+            <div class="it-col-qty">
+              {% if item.current_stock > 0 %}
+                <input 
+                  type="number" 
+                  name="quantity_{{ item.name }}" 
+                  min="0" 
+                  max="{{ item.current_stock }}" 
+                  value="0"
+                  class="form-input"
+                >
+              {% else %}
+                <span style="color:#94a3b8;">—</span>
+              {% endif %}
+            </div>
+
+          </div>
+          {% endfor %}
           </div>
 
-          <div class="form-section" style="margin-top: 1.5rem;">
+          <!-- Selection banner -->
+          <div class="selection-banner" id="selBanner">
+            <strong><span id="selInst">0</span> instrument(s) selected · <span id="selTotal">0</span> total items</strong>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-section" style="margin-top:1.5rem;">
             <label class="form-label">NOTES (OPTIONAL)</label>
-            <textarea name="notes" class="form-textarea" placeholder="Add any special instructions or comments..."></textarea>
+            <textarea name="notes" id="notesInput" class="form-textarea" placeholder="Add any special instructions or comments…"></textarea>
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn-submit" id="btn-submit" disabled>
+            <button type="submit" class="btn-submit" id="submitBtn">
               <i data-lucide="check-circle-2"></i> Submit Request
             </button>
             <a href="{% url 'nurse_dashboard' %}" class="btn-outline">Cancel</a>
           </div>
-
         </form>
       </div>
     </main>
   </div>
+
+  <script src="{% static 'mock-data.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
   <script>
-    lucide.createIcons();
-    
-    const checkboxes = document.querySelectorAll('.instrument-cb');
-    const submitBtn = document.getElementById('btn-submit');
-    const selectionBanner = document.getElementById('selection-banner');
-    const selInst = document.getElementById('sel-inst');
-    const selTotal = document.getElementById('sel-total');
-
-    function updateTotals() {
-      let instCount = 0;
-      let totalItems = 0;
-      
-      checkboxes.forEach(cb => {
-        const id = cb.getAttribute('data-id');
-        const input = document.getElementById(`input_${id}`);
-        const row = document.getElementById(`row_${id}`);
-        const stepper = document.getElementById(`stepper_${id}`);
-        const dash = document.getElementById(`dash_${id}`);
-
-        if (cb.checked) {
-          instCount++;
-          if (input.value === "0") input.value = "1";
-          totalItems += parseInt(input.value);
-          row.classList.add('checked-row');
-          stepper.classList.remove('hidden');
-          dash.classList.add('hidden');
-        } else {
-          input.value = "0";
-          row.classList.remove('checked-row');
-          stepper.classList.add('hidden');
-          dash.classList.remove('hidden');
-        }
-      });
-
-      if (instCount > 0) {
-        selectionBanner.classList.remove('hidden');
-        selInst.innerText = instCount;
-        selTotal.innerText = totalItems;
-        submitBtn.disabled = false;
-        submitBtn.classList.add('active');
-      } else {
-        selectionBanner.classList.add('hidden');
-        submitBtn.disabled = true;
-        submitBtn.classList.remove('active');
-      }
-    }
-
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', updateTotals);
-    });
-
     document.querySelectorAll('.stepper-btn.plus').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.currentTarget.getAttribute('data-id');
-        const input = document.getElementById(`input_${id}`);
-        const display = document.getElementById(`display_${id}`);
-        input.value = parseInt(input.value) + 1;
-        display.innerText = input.value;
-        updateTotals();
+      btn.addEventListener('click', () => {
+        const input = btn.closest('.it-col-qty').querySelector('input');
+        input.stepUp();
+        input.dispatchEvent(new Event('input'));
       });
     });
 
     document.querySelectorAll('.stepper-btn.minus').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.currentTarget.getAttribute('data-id');
-        const input = document.getElementById(`input_${id}`);
-        const display = document.getElementById(`display_${id}`);
-        if (parseInt(input.value) > 1) {
-          input.value = parseInt(input.value) - 1;
-          display.innerText = input.value;
-          updateTotals();
-        }
+      btn.addEventListener('click', () => {
+        const input = btn.closest('.it-col-qty').querySelector('input');
+        input.stepDown();
+        input.dispatchEvent(new Event('input'));
       });
     });
 
+    function updateBanner() {
+      const inputs = document.querySelectorAll('input[type="number"]');
+      let count = 0;
+      let total = 0;
+
+      inputs.forEach(input => {
+        const val = parseInt(input.value) || 0;
+        if (val > 0) {
+          count++;
+          total += val;
+        }
+      });
+
+      document.getElementById('selInst').textContent = count;
+      document.getElementById('selTotal').textContent = total;
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = count === 0;
+    }
+
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+      input.addEventListener('input', updateBanner);
+    });
+
+    lucide.createIcons();
   </script>
 </body>
 </html>

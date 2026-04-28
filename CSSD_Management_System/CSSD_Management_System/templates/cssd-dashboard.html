@@ -1,11 +1,21 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSSD Dashboard</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .eta-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
+      border-radius: 6px; padding: 2px 8px; font-size: .72rem; font-weight: 500;
+    }
+    .eta-badge.urgent { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+  </style>
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
@@ -15,85 +25,199 @@
         <div class="nav-title"><h2>CSSD Dashboard</h2><p>Central Sterile Supply</p></div>
       </div>
       <div class="nav-actions">
-        <a href="{% url 'cssd_batch_list' %}" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">
+        <a href="cssd-batch-list.html" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">
           <i data-lucide="flask-conical"></i> Batches
         </a>
         <div class="user-profile">
-          <div class="user-info-text"><strong>{{ staff_name }}</strong><span>{{ staff_role }}</span></div>
+          <div class="user-info-text"><strong id="staffName">Sara</strong><span id="staffRole">CSSD Technician</span></div>
           <div class="user-avatar"><i data-lucide="user"></i></div>
         </div>
-        <a href="{% url 'logout' %}" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
+        <a  href="/logout/"   class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
       </div>
     </nav>
 
     <main class="dashboard-main">
       <div class="dashboard-container">
 
+        <!-- ── Stats Grid (PROJ-28, PROJ-26, PROJ-27, PROJ-29) ─────────────── -->
         <div class="cssd-stats-grid">
-          <!-- Clicking pending goes to filtered pending-only view -->
-          <a href="{% url 'cssd_dashboard' %}?filter=pending" class="stat-card" style="text-decoration:none;display:block;">
-            <div class="stat-header"><span class="stat-label">Pending Requests</span><i data-lucide="clock" class="stat-icon-small orange"></i></div>
-            <h3 class="stat-value">{{ stats.pending }}</h3>
+
+          <!-- PROJ-28: View Active Requests -->
+          <a href="#requests-panel" class="stat-card" style="text-decoration:none;display:block;" id="activeCard">
+            <div class="stat-header">
+              <span class="stat-label">Active Requests</span>
+              <i data-lucide="layers" class="stat-icon-small blue"></i>
+            </div>
+            <h3 class="stat-value" id="statActive">—</h3>
+            <p class="stat-desc">In-progress across all stages</p>
+          </a>
+
+          <!-- PROJ-26: View Pending Requests Count -->
+          <a href="?filter=pending" class="stat-card" style="text-decoration:none;display:block;" id="pendingCard">
+            <div class="stat-header">
+              <span class="stat-label">Pending Requests</span>
+              <i data-lucide="clock" class="stat-icon-small orange"></i>
+            </div>
+            <h3 class="stat-value" id="statPending">—</h3>
             <p class="stat-desc">Click to view pending only</p>
           </a>
-          <div class="stat-card">
-            <div class="stat-header"><span class="stat-label">In Progress</span><i data-lucide="package" class="stat-icon-small blue"></i></div>
-            <h3 class="stat-value">{{ stats.in_progress }}</h3>
-            <p class="stat-desc">Currently processing</p>
-          </div>
-          <div class="stat-card">
-            <div class="stat-header"><span class="stat-label">Completed</span><i data-lucide="check-circle-2" class="stat-icon-small green"></i></div>
-            <h3 class="stat-value">{{ stats.completed }}</h3>
-            <p class="stat-desc">Successfully delivered</p>
-          </div>
-          <a href="{% url 'cssd_inventory_alerts' %}" class="stat-card alert-stat" style="text-decoration:none;display:flex;">
+
+          <!-- PROJ-27: View Inventory Shortage Alerts -->
+          <a href="cssd-inventory-alerts.html" class="stat-card alert-stat" style="text-decoration:none;display:flex;">
             <div class="stat-icon-wrapper"><i data-lucide="alert-triangle"></i></div>
-            <div class="stat-info"><h3>Shortage Alerts</h3><span class="stat-number">{{ stats.alerts }}</span></div>
+            <div class="stat-info">
+              <h3>Shortage Alerts</h3>
+              <span class="stat-number" id="statAlerts">—</span>
+            </div>
           </a>
+
+          <!-- PROJ-29: View Estimated Completion Time -->
+          <div class="stat-card" id="etaCard">
+            <div class="stat-header">
+              <span class="stat-label">Est. Completion</span>
+              <i data-lucide="timer" class="stat-icon-small green"></i>
+            </div>
+            <h3 class="stat-value" id="statEta">—</h3>
+            <p class="stat-desc" id="statEtaDesc">Next delivery estimate</p>
+          </div>
+
         </div>
 
-        {% if show_pending_only %}
-        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.6rem 1rem;font-size:.8rem;color:#92400e;display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;">
-          <i data-lucide="filter" style="width:14px;height:14px;"></i>
-          Showing pending requests only. <a href="{% url 'cssd_dashboard' %}" style="color:#2563eb;margin-left:.25rem;">Clear filter</a>
-        </div>
-        {% endif %}
-
+        <!-- ── Search bar ──────────────────────────────────────────────────── -->
         <div class="cssd-filters-bar">
           <div class="search-input-wrapper expand">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search by request ID or nurse...">
+            <input type="text" class="search-input" id="searchBox" placeholder="Search by request ID, nurse, or status…">
           </div>
+          <button class="btn-outline" id="filterPendingBtn" style="font-size:.82rem;padding:6px 14px;">
+            <i data-lucide="filter" style="width:14px;height:14px;"></i> Pending only
+          </button>
+          <button class="btn-outline" id="clearFilterBtn" style="font-size:.82rem;padding:6px 14px;display:none;">
+            <i data-lucide="x" style="width:14px;height:14px;"></i> Clear filter
+          </button>
         </div>
 
-        <div class="cssd-requests-panel">
-          <div class="panel-header"><h3>{% if show_pending_only %}Pending Requests{% else %}Incoming Requests{% endif %}</h3></div>
-          <div class="cssd-list">
-            {% for req in requests %}
-            <a href="{% url 'cssd_request_detail' req.id %}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;">
-              <div class="item-main">
-                <div class="item-title">
-                  <span class="item-id">REQ-{{ req.id|stringformat:"04d" }}</span>
-                  <span class="dot-separator">ΓÇó</span>
-                  <span class="item-requester">{{ req.requester.email }}</span>
-                </div>
-                <div class="item-subtitle">{% for item in req.items.all %}{{ item.inventory_item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
-                <div class="item-time">{{ req.submitted_at|date:'Y-m-d H:i' }}</div>
-              </div>
-              <div class="item-actions">
-                <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
-                {% if req.priority == 'Urgent' %}<span class="pill pill-urgent">Urgent</span>{% else %}<span class="pill pill-normal">Normal</span>{% endif %}
-              </div>
-            </a>
-            {% empty %}
-            <div style="text-align:center;padding:2rem;color:#94a3b8;">No requests found.</div>
-            {% endfor %}
+        <!-- ── Requests panel ──────────────────────────────────────────────── -->
+        <div class="cssd-requests-panel" id="requests-panel">
+          <div class="panel-header"><h3 id="panelTitle">Incoming Requests</h3></div>
+          <div class="cssd-list" id="requestList">
+            <!-- Populated by JS -->
           </div>
         </div>
 
       </div>
     </main>
   </div>
+
+  <script src="{% static 'mock-data.js' %}"></script>
   <script src="{% static 'script.js' %}"></script>
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    const statusColors = {
+      Requested:'#f97316', Collected:'#3b82f6', Cleaned:'#06b6d4',
+      Sterilized:'#6366f1', Packed:'#a855f7', Delivered:'#10b981'
+    };
+
+    function etaMinutes(req) {
+      // Simple mock ETA: stages remaining × 20 min
+      const order = ['Requested','Collected','Cleaned','Sterilized','Packed','Delivered'];
+      const idx = order.indexOf(req.status);
+      const remaining = Math.max(0, (order.length - 1) - idx);
+      return remaining * 20;
+    }
+
+    function fmtEta(mins) {
+      if (mins === 0) return 'Delivered';
+      if (mins < 60)  return `~${mins} min`;
+      return `~${(mins/60).toFixed(1)} hr`;
+    }
+
+    function renderList(reqs) {
+      const list = document.getElementById('requestList');
+      if (!reqs.length) {
+        list.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;">No requests found.</div>';
+        return;
+      }
+      list.innerHTML = reqs.map(req => {
+        const color = statusColors[req.status] || '#64748b';
+        const eta = etaMinutes(req);
+        const etaCls = req.priority === 'Urgent' ? 'urgent' : '';
+        return `
+        <a href="cssd-request-details.html?id=${req.id}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;">
+          <div class="item-main">
+            <div class="item-title">
+              <span class="item-id">REQ-${String(req.id).padStart(4,'0')}</span>
+              <span class="dot-separator">•</span>
+              <span class="item-requester">${req.requester}</span>
+            </div>
+            <div class="item-subtitle">${req.items.join(', ')}</div>
+            <div class="item-time">${req.submitted_at}
+              <span class="eta-badge ${etaCls}" style="margin-left:8px;">
+                <i data-lucide="timer" style="width:11px;height:11px;"></i> ${fmtEta(eta)}
+              </span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <span class="pill" style="background:${color}20;color:${color};border:1px solid ${color}40;">${req.status}</span>
+            ${req.priority==='Urgent'
+              ? '<span class="pill pill-urgent">Urgent</span>'
+              : '<span class="pill pill-normal">Normal</span>'}
+          </div>
+        </a>`;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const stats = MOCK.getStats();
+      document.getElementById('statActive').textContent  = stats.in_progress;
+      document.getElementById('statPending').textContent = stats.pending;
+      document.getElementById('statAlerts').textContent  = stats.alerts;
+
+      // ETA: earliest non-delivered urgent request
+      const urgent = MOCK.requests.filter(r => r.priority === 'Urgent' && r.status !== 'Delivered');
+      if (urgent.length) {
+        const mins = Math.min(...urgent.map(etaMinutes));
+        document.getElementById('statEta').textContent     = fmtEta(mins);
+        document.getElementById('statEtaDesc').textContent = `${urgent.length} urgent request(s) pending`;
+      } else {
+        document.getElementById('statEta').textContent     = 'No urgent';
+        document.getElementById('statEtaDesc').textContent = 'All clear';
+      }
+
+      let showPending = false;
+      renderList(MOCK.requests);
+
+      // Filter button
+      document.getElementById('filterPendingBtn').addEventListener('click', () => {
+        showPending = true;
+        document.getElementById('panelTitle').textContent = 'Pending Requests';
+        document.getElementById('clearFilterBtn').style.display = '';
+        document.getElementById('filterPendingBtn').style.display = 'none';
+        renderList(MOCK.requests.filter(r => r.status === 'Requested'));
+      });
+
+      document.getElementById('clearFilterBtn').addEventListener('click', () => {
+        showPending = false;
+        document.getElementById('panelTitle').textContent = 'Incoming Requests';
+        document.getElementById('clearFilterBtn').style.display = 'none';
+        document.getElementById('filterPendingBtn').style.display = '';
+        renderList(MOCK.requests);
+      });
+
+      // Search
+      document.getElementById('searchBox').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        const base = showPending ? MOCK.requests.filter(r => r.status === 'Requested') : MOCK.requests;
+        renderList(base.filter(r =>
+          `req-${String(r.id).padStart(4,'0')}`.includes(q) ||
+          r.requester.toLowerCase().includes(q) ||
+          r.status.toLowerCase().includes(q) ||
+          r.items.some(i => i.toLowerCase().includes(q))
+        ));
+      });
+    });
+  </script>
 </body>
 </html>

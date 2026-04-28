@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nurse Login - CSSD</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="page-wrapper theme-teal">
+    <header class="header theme-teal">
+      <div class="header-content">
+        <div class="header-title">
+          <h1>Nurse Portal</h1>
+          <p>Instrument Request Management</p>
+        </div>
+        <div class="system-status">
+          <div class="status-dot"></div>
+          <span>System Online</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="login-container-wrapper">
+
+        <a href="{% url 'home' %}" class="back-link">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+          Back to role selection
+        </a>
+
+        <div class="login-card">
+          <div class="login-header">
+            <div class="app-icon teal">
+              <i data-lucide="stethoscope" style="width:32px;height:32px;"></i>
+            </div>
+            <h2 class="login-title">Nurse Login</h2>
+            <p class="login-subtitle">Enter your credentials to access the portal</p>
+          </div>
+
+          <!-- PROJ-12: Nurse Login -->
+          <form id="loginForm" data-role="Nurse" action="{% url 'login' %}?role=nurse" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="role" value="nurse">
+            {% if form.non_field_errors %}
+            <div class="security-notice" style="margin-bottom:1rem;border-color:#fecaca;background:#fef2f2;">
+              <i data-lucide="alert-circle" class="security-icon" style="color:#dc2626;"></i>
+              <div class="security-content">
+                <h4 style="color:#b91c1c;">Sign-in failed</h4>
+                <p style="color:#b91c1c;">{{ form.non_field_errors|striptags }}</p>
+              </div>
+            </div>
+            {% endif %}
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <div class="input-wrapper">
+                <i data-lucide="mail" class="input-icon"></i>
+                <input type="email" name="username" class="form-input" placeholder="nurse@hospital.com" value="{{ form.username.value|default:'' }}" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="input-wrapper">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
+                <button type="button" class="btn-toggle-password" id="togglePasswordBtn">
+                  <i data-lucide="eye" id="eyeIcon"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <label class="checkbox-label">
+                <input type="checkbox" class="checkbox-input"> Remember me
+              </label>
+              <a href="#" class="forgot-link">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="btn-submit teal" id="submitBtn">
+              <span id="btnText">Sign In to Portal</span>
+              <i data-lucide="log-in" id="btnIcon" style="width:18px;height:18px;margin-left:8px;"></i>
+            </button>
+          </form>
+
+          <div class="security-notice notice-warning login-security-notice">
+            <i data-lucide="shield-alert" class="security-icon"></i>
+            <div class="security-content">
+              <h4>Security Notice</h4>
+              <p>This system contains confidential patient information. Unauthorized access is prohibited.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../static/mock-data.js"></script>
+  <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

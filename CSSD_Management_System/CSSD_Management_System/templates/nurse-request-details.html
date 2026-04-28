@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,139 +11,146 @@
 </head>
 <body>
   <div class="dashboard-wrapper theme-teal">
-    <!-- Navbar -->
-    <nav class="dashboard-nav theme-dark-teal">
-      <div class="nav-brand">
-        <div class="nav-logo teal">
-          <i data-lucide="stethoscope"></i>
-        </div>
-        <div class="nav-title">
-          <h2>Request Details</h2>
-          <p>REQ-{{ req.id|stringformat:"04d" }}</p>
-        </div>
-      </div>
-      <div class="nav-actions">
-        <a href="{% url 'nurse_dashboard' %}" class="btn-back">
-          <i data-lucide="arrow-left"></i> Back to Dashboard
-        </a>
-      </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="dashboard-main details-main">
-      <div class="container-center">
-        <!-- Summary Card -->
-        <div class="detail-card summary-card">
-          <div class="summary-header">
-            <h3>REQ-{{ req.id|stringformat:"04d" }}</h3>
-            {% if req.priority == 'Urgent' %}
-              <span class="text-urgent"><i data-lucide="alert-triangle"></i> Urgent Priority</span>
-            {% endif %}
-          </div>
-          <div class="summary-pills">
-            <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
-            {% if req.priority == 'Urgent' %}
-              <span class="pill pill-urgent">Urgent</span>
-            {% else %}
-              <span class="pill pill-normal">Normal</span>
-            {% endif %}
-          </div>
-          <div class="summary-grid">
-            <div class="sg-item">
-              <i data-lucide="building"></i>
-              <div>
-                <span class="sg-label">Department</span>
-                <span class="sg-value">{{ req.department }}</span>
-              </div>
-            </div>
-            <div class="sg-item">
-              <i data-lucide="user"></i>
-              <div>
-                <span class="sg-label">Requested By</span>
-                <span class="sg-value">{{ req.requester.email|default:"System" }}</span>
-              </div>
-            </div>
-            <div class="sg-item">
-              <i data-lucide="calendar"></i>
-              <div>
-                <span class="sg-label">Submitted</span>
-                <span class="sg-value">{{ req.submitted_at|date:'Y-m-d H:i' }}</span>
-              </div>
-            </div>
-            <div class="sg-item">
-              <i data-lucide="clock"></i>
-              <div>
-                <span class="sg-label">Estimated Delivery</span>
-                <span class="sg-value">Pending...</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vertical Timeline Card -->
-        <div class="detail-card timeline-card">
-          <div class="card-header">
-            <i data-lucide="clock"></i> <h4>Processing Timeline</h4>
-          </div>
-          <div class="vertical-timeline">
-            
-            <div class="vt-item step-submitted {% if req.submitted_at %}completed{% endif %}">
-              <div class="vt-line"></div>
-              <div class="vt-icon"><i data-lucide="check"></i></div>
-              <div class="vt-content">
-                <h5>Submitted</h5>
-                {% if req.submitted_at %}<span>{{ req.submitted_at|date:'Y-m-d H:i' }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="vt-item step-collected {% if req.collected_at %}completed{% endif %}">
-              <div class="vt-line"></div>
-              <div class="vt-icon"><i data-lucide="check"></i></div>
-              <div class="vt-content">
-                <h5>Collected</h5>
-                {% if req.collected_at %}<span>{{ req.collected_at|date:'Y-m-d H:i' }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="vt-item step-cleaned {% if req.cleaned_at %}completed{% endif %}">
-              <div class="vt-line"></div>
-              <div class="vt-icon"><i data-lucide="check"></i></div>
-              <div class="vt-content">
-                <h5>Cleaned</h5>
-                {% if req.cleaned_at %}<span>{{ req.cleaned_at|date:'Y-m-d H:i' }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="vt-item step-sterilized {% if req.sterilized_at %}completed{% endif %}">
-              <div class="vt-line"></div>
-              <div class="vt-icon"><i data-lucide="check"></i></div>
-              <div class="vt-content">
-                <h5>Sterilized</h5>
-                {% if req.sterilized_at %}<span>{{ req.sterilized_at|date:'Y-m-d H:i' }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="vt-item step-packed {% if req.packed_at %}completed{% endif %}">
-              <div class="vt-line"></div>
-              <div class="vt-icon"><i data-lucide="check"></i></div>
-              <div class="vt-content">
-                <h5>Packed</h5>
-                {% if req.packed_at %}<span>{{ req.packed_at|date:'Y-m-d H:i' }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="vt-item step-delivered {% if req.status == 'Delivered' %}completed{% endif %} pending-last">
-              <div class="vt-icon pending-node"></div>
-              <div class="vt-content">
-                <h5>Ready for Delivery</h5>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </main>
+<!-- NAV -->
+<nav class="dashboard-nav theme-dark-teal">
+  <div class="nav-brand">
+    <div class="nav-logo teal"><i data-lucide="stethoscope"></i></div>
+    <div class="nav-title">
+      <h2>Request Details</h2>
+      <p>REQ-{{ req.id|stringformat:"04d" }}</p>
+    </div>
   </div>
+
+  <div class="nav-actions">
+    <a href="{% url 'nurse_dashboard' %}" class="btn-back">
+      <i data-lucide="arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="dashboard-main details-main">
+  <div class="container-center">
+
+    <!-- SUMMARY -->
+    <div class="detail-card summary-card">
+      <div class="summary-header">
+        <h3>REQ-{{ req.id|stringformat:"04d" }}</h3>
+
+        {% if req.priority == "Urgent" %}
+          <span class="text-urgent">
+            <i data-lucide="alert-triangle"></i> Urgent Priority
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="summary-pills">
+        <span class="pill">{{ req.status }}</span>
+
+        {% if req.priority == "Urgent" %}
+          <span class="pill pill-urgent">Urgent</span>
+        {% else %}
+          <span class="pill pill-normal">Normal</span>
+        {% endif %}
+      </div>
+
+      <div class="summary-grid">
+        <div class="sg-item">
+          <i data-lucide="building"></i>
+          <div>
+            <span class="sg-label">Department</span>
+            <span class="sg-value">{{ req.department }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="user"></i>
+          <div>
+            <span class="sg-label">Requested By</span>
+            <span class="sg-value">{{ req.requester }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="calendar"></i>
+          <div>
+            <span class="sg-label">Submitted</span>
+            <span class="sg-value">{{ req.submitted_at }}</span>
+          </div>
+        </div>
+
+        <div class="sg-item">
+          <i data-lucide="timer"></i>
+          <div>
+            <span class="sg-label">Estimated Delivery</span>
+            <span class="sg-value" style="color:#0d9488;font-weight:600;">
+              {{ eta }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="detail-card timeline-card">
+      <div class="card-header">
+        <i data-lucide="clock"></i>
+        <h4>Processing Timeline</h4>
+      </div>
+
+      <div class="vertical-timeline">
+        {% for status in status_order %}
+          <div class="vt-item">   
+          {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
+              completed
+            {% endif %} 
+          
+
+            {% if not forloop.last %}
+              <div class="vt-line"></div>
+            {% endif %}
+            
+            {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
+            <div class="vt-icon" style = "background-color : green">✔</div>
+            {% else %}
+            <div class="vt-icon" style = "background-color : red"><i data-lucide="x"></i></div>
+            {% endif %}
+
+            
+
+            <div class="vt-content">
+              <h5>{{ status }}</h5>
+              {% if forloop.counter0 <= current_status_index %}
+                <span>{{ req.submitted_at }}</span>
+              {% endif %}
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- INSTRUMENTS -->
+    <div class="detail-card instruments-card">
+      <h3>Requested Instruments</h3>
+
+      <ul class="instrument-checklist">
+        {% for item in items %}
+          <li>
+            <span>{{item}}</span>
+            <i data-lucide="check-circle-2" class="icon-green"></i>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+</main>
+
+  </div>
+  <script src="{% static 'mock-data.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
   <script>lucide.createIcons();</script>
+
 </body>
 </html>
