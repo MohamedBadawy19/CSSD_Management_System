@@ -9,14 +9,28 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_router, name='dashboard_router'),
 
-    # CSSD infrastructure
+    # CSSD — core
     path('dashboard/cssd/', views.cssd_dashboard, name='cssd_dashboard'),
     path('dashboard/cssd/request/<int:pk>/', views.cssd_request_detail, name='cssd_request_detail'),
-
-    # US-17: Mark as Collected
+    path('dashboard/cssd/request/<int:pk>/delete/', views.cssd_delete_request, name='cssd_delete_request'),
     path('dashboard/cssd/request/<int:pk>/update/<str:status>/', views.cssd_update_request_status, name='cssd_update_request_status'),
 
-    # Nurse infrastructure
+    # CSSD — batches
+    path('dashboard/cssd/batches/', views.cssd_batch_list, name='cssd_batch_list'),
+    path('dashboard/cssd/batches/create/', views.cssd_batch_create, name='cssd_batch_create'),
+    path('dashboard/cssd/batches/<int:pk>/', views.cssd_batch_detail, name='cssd_batch_detail'),
+
+    # CSSD — inventory alerts
+    path('dashboard/cssd/inventory/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
+
+    # Nurse
     path('dashboard/nurse/', views.nurse_dashboard, name='nurse_dashboard'),
     path('dashboard/nurse/create/', views.nurse_create_request, name='nurse_create_request'),
+    path('dashboard/nurse/request/<int:pk>/', views.nurse_request_detail, name='nurse_request_detail'),
+    path('dashboard/nurse/notifications/read/', views.nurse_mark_notifications_read, name='nurse_mark_notifications_read'),
+    path('dashboard/nurse/sterile-stock/', views.nurse_sterile_stock, name='nurse_sterile_stock'),
+
+    # Hospital admin
+    path('dashboard/hospital/audit/', views.hospital_audit, name='hospital_audit'),
+    path('dashboard/hospital/report/', views.hospital_report, name='hospital_report'),
 ]

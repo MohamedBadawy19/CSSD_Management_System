@@ -72,3 +72,85 @@ class SterilizationBatch(models.Model):
         return f"Batch {self.id} - {self.status}"
 
 
+class InventoryItem(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.CharField(max_length=100)
+    current_stock = models.IntegerField(default=0)
+    min_threshold = models.IntegerField(default=10)
+
+    def __str__(self):
+        return f"{self.name} ({self.category})"
+
+    @property
+    def is_low_stock(self):
+        return self.current_stock < self.min_threshold
+
+
+class InstrumentRequest(models.Model):
+    PRIORITY_CHOICES = [
+        ('Normal', 'Normal'),
+        ('Urgent', 'Urgent'),
+    ]
+    STATUS_CHOICES = [
+        ('Requested', 'Requested'),
+        ('Collected', 'Collected'),
+        ('Cleaned', 'Cleaned'),
+        ('Sterilized', 'Sterilized'),
+        ('Packed', 'Packed'),
+        ('Delivered', 'Delivered'),
+    ]
+
+    requester = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='requests'
+    )
+    last_operator = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='processed_requests'
+    )
+    batch = models.ForeignKey(
+        SterilizationBatch, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='requests'
+    )
+    priority = models.CharField(max_length=50, choices=PRIORITY_CHOICES, default='Normal')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Requested')
+    department = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    is_archived = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    collected_at = models.DateTimeField(null=True, blank=True)
+    cleaned_at = models.DateTimeField(null=True, blank=True)
+    sterilized_at = models.DateTimeField(null=True, blank=True)
+    packed_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Request #{self.id} - {self.status} ({self.priority})"
+
+
+class RequestItem(models.Model):
+    request = models.ForeignKey(
+        InstrumentRequest, on_delete=models.CASCADE, related_name='items'
+    )
+    inventory_item = models.ForeignKey(
+        InventoryItem, on_delete=models.CASCADE
+    )
+    quantity = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.quantity}x {self.inventory_item.name} for Request #{self.request.id}"
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='notifications'
+    )
+    request = models.ForeignKey(
+        InstrumentRequest, on_delete=models.CASCADE
+    )
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification for {self.recipient.email}: {self.message}"
+

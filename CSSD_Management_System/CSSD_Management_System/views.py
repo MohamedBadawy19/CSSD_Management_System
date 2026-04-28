@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db import models as django_models
 
 from .forms import EmailLoginForm, InventoryItemForm
 from .decorators import cssd_staff_required
@@ -102,7 +103,12 @@ def cssd_update_request_status(request, pk, status):
     """
     US-17: Allows a CSSD technician to mark an InstrumentRequest as Collected.
     Only the Requested → Collected transition is permitted in this branch.
+    Only POST requests are accepted; GET returns 405.
     """
+    from django.http import HttpResponseNotAllowed
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
     req = get_object_or_404(InstrumentRequest, pk=pk)
 
     if status != 'Collected':
@@ -182,3 +188,102 @@ def nurse_create_request(request):
         messages.success(request, f'Request REQ-{new_req.id:04d} submitted.')
         return redirect('nurse_dashboard')
     return render(request, 'nurse-create-request.html', {'instruments': instruments})
+
+
+# ---------------------------------------------------------------------------
+# Nurse — extra views
+# ---------------------------------------------------------------------------
+
+@login_required
+def nurse_request_detail(request, pk):
+    req = get_object_or_404(InstrumentRequest, pk=pk, requester=request.user)
+    return render(request, 'nurse-request-details.html', {'req': req})
+
+
+@login_required
+def nurse_mark_notifications_read(request):
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return redirect('nurse_dashboard')
+
+
+@login_required
+def nurse_sterile_stock(request):
+    items = InventoryItem.objects.all().order_by('category', 'name')
+    return render(request, 'nurse-sterile-stock.html', {'items': items})
+
+
+# ---------------------------------------------------------------------------
+# CSSD — Batch views
+# ---------------------------------------------------------------------------
+
+from .models import SterilizationBatch
+from .forms import SterilizationBatchForm
+
+
+@login_required
+@cssd_staff_required
+def cssd_batch_list(request):
+    batches = SterilizationBatch.objects.all().order_by('-created_at')
+    return render(request, 'cssd-batch-list.html', {'batches': batches})
+
+
+@login_required
+@cssd_staff_required
+def cssd_batch_create(request):
+    form = SterilizationBatchForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        batch = form.save(commit=False)
+        batch.operator = request.user
+        batch.save()
+        messages.success(request, f'Batch #{batch.id} created.')
+        return redirect('cssd_batch_list')
+    return render(request, 'cssd-batch-create.html', {'form': form})
+
+
+@login_required
+@cssd_staff_required
+def cssd_batch_detail(request, pk):
+    batch = get_object_or_404(SterilizationBatch, pk=pk)
+    return render(request, 'cssd-batch-detail.html', {'batch': batch})
+
+
+# ---------------------------------------------------------------------------
+# CSSD — Inventory alerts
+# ---------------------------------------------------------------------------
+
+@login_required
+@cssd_staff_required
+def cssd_inventory_alerts(request):
+    low_stock = InventoryItem.objects.filter(current_stock__lt=django_models.F('min_threshold')).order_by('current_stock')
+    return render(request, 'cssd-inventory-alerts.html', {'low_stock': low_stock})
+
+
+# ---------------------------------------------------------------------------
+# CSSD — Delete request
+# ---------------------------------------------------------------------------
+
+@login_required
+@cssd_staff_required
+def cssd_delete_request(request, pk):
+    req = get_object_or_404(InstrumentRequest, pk=pk)
+    if request.method == 'POST':
+        req.is_archived = True
+        req.save()
+        messages.success(request, f'REQ-{req.id:04d} archived.')
+        return redirect('cssd_dashboard')
+    return render(request, 'cssd-request-details.html', {'req': req, 'batches': [], 'confirm_delete': True})
+
+
+# ---------------------------------------------------------------------------
+# Hospital Admin views
+# ---------------------------------------------------------------------------
+
+@login_required
+def hospital_audit(request):
+    all_requests = InstrumentRequest.objects.all().order_by('-submitted_at')
+    return render(request, 'hospital-audit.html', {'requests': all_requests})
+
+
+@login_required
+def hospital_report(request):
+    return render(request, 'hospital-report.html', {})
