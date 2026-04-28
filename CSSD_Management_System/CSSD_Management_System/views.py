@@ -1,10 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from .forms import EmailLoginForm
+from .forms import EmailLoginForm, SterilizationBatchForm
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
-from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem, Notification
+from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem, Notification, SterilizationBatch
 from .decorators import cssd_staff_required
 from django.contrib import messages
 from django.utils import timezone
@@ -171,8 +171,7 @@ def cssd_request_detail(request, pk):
 @cssd_staff_required
 def cssd_update_request_status(request, pk, status):
     """
-    US-18: Allows a CSSD technician to mark an InstrumentRequest as Cleaned.
-    Only the Collected -> Cleaned transition is permitted in this branch.
+    Unified transition view for Proj-17 (Collected), Proj-18 (Cleaned), Proj-19 (Sterilized).
     Only POST requests are accepted; GET returns 405.
     """
     if request.method != 'POST':
@@ -180,21 +179,60 @@ def cssd_update_request_status(request, pk, status):
 
     req = get_object_or_404(InstrumentRequest, pk=pk)
 
-    if status != 'Cleaned':
-        messages.error(request, f"This branch only supports marking as Cleaned. Got: '{status}'.")
+    valid_transitions = {
+        'Collected': 'Requested',
+        'Cleaned': 'Collected',
+        'Sterilized': 'Cleaned',
+    }
+
+    if status not in valid_transitions:
+        messages.error(request, f"Invalid transition status: '{status}'.")
         return redirect('cssd_request_detail', pk=pk)
 
-    if req.status != 'Collected':
-        messages.error(request, f"Can only clean a Collected item. Current status: '{req.status}'.")
+    if req.status != valid_transitions[status]:
+        messages.error(request, f"Can only mark as {status} from {valid_transitions[status]}. Current status: '{req.status}'.")
         return redirect('cssd_request_detail', pk=pk)
 
-    req.status = 'Cleaned'
-    req.cleaned_at = timezone.now()
+    if status == 'Sterilized':
+        batch_id = request.POST.get('batch_id') or request.GET.get('batch_id')
+        if not batch_id:
+            messages.error(request, 'A sterilization batch ID is required before marking as Sterilized.')
+            return redirect('cssd_request_detail', pk=pk)
+        try:
+            req.batch = SterilizationBatch.objects.get(pk=batch_id)
+        except SterilizationBatch.DoesNotExist:
+            messages.error(request, 'Batch not found.')
+            return redirect('cssd_request_detail', pk=pk)
+        req.sterilized_at = timezone.now()
+    elif status == 'Collected':
+        req.collected_at = timezone.now()
+    elif status == 'Cleaned':
+        req.cleaned_at = timezone.now()
+
+    req.status = status
     req.last_operator = request.user
     req.save()
-    _notify_nurse(req, f'REQ-{req.id:04d} instruments have been cleaned.')
-    messages.success(request, f'REQ-{req.id:04d} marked as Cleaned.')
+    
+    _notify_nurse(req, f'REQ-{req.id:04d} instruments have been {status.lower()}.')
+    messages.success(request, f'REQ-{req.id:04d} marked as {status}.')
     return redirect('cssd_request_detail', pk=pk)
+
+
+@login_required
+@cssd_staff_required
+def cssd_batch_create(request):
+    """Supporting view: create a sterilization batch to use with this feature."""
+    if request.method == 'POST':
+        form = SterilizationBatchForm(request.POST)
+        if form.is_valid():
+            batch = form.save(commit=False)
+            batch.operator = request.user
+            batch.save()
+            messages.success(request, f'Batch #{batch.id} created.')
+            return redirect('cssd_dashboard')
+    else:
+        form = SterilizationBatchForm()
+    return render(request, 'cssd-batch-create.html', {'form': form})
 
 
 def nurse_request_details(request, request_id):
