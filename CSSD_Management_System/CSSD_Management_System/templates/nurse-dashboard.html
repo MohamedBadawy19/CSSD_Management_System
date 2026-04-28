@@ -52,19 +52,19 @@
         <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Total Requests</span><h3 class="stat-value" id="statTotal">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Total Requests</span><h3 class="stat-value" id="statTotal">{{total}}</h3></div>
             <i data-lucide="package" class="stat-icon blue"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">In Progress</span><h3 class="stat-value" id="statInProgress">—</h3></div>
+            <div class="stat-info"><span class="stat-label">In Progress</span><h3 class="stat-value" id="statInProgress">{{in_progress}}</h3></div>
             <i data-lucide="clock" class="stat-icon orange"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Urgent</span><h3 class="stat-value" id="statUrgent">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Urgent</span><h3 class="stat-value" id="statUrgent">{{urgent}}</h3></div>
             <i data-lucide="alert-circle" class="stat-icon red"></i>
           </div>
           <div class="stat-card">
-            <div class="stat-info"><span class="stat-label">Delivered</span><h3 class="stat-value" id="statDelivered">—</h3></div>
+            <div class="stat-info"><span class="stat-label">Delivered</span><h3 class="stat-value" id="statDelivered">{{delivered}}</h3></div>
             <i data-lucide="check-circle-2" class="stat-icon green"></i>
           </div>
         </div>
@@ -78,8 +78,55 @@
         </div>
 
         <!-- Requests list -->
-        <div class="requests-list" id="requestsList"></div>
+        <div class="requests-list" id="requestsList">
 
+          
+            {% if requests %}
+              {% for req in requests %}
+                {% if req.status != "Delivered" %}
+                <a href="/nurse-request-details.html?id={{req.id}}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
+                  
+                  <div class="req-header">
+                    <div class="req-title-group">
+                      <h4 class="req-id">REQ-{{ req.id|stringformat:"04d" }}</h4>
+
+                      {% if req.priority == "Urgent" %}
+                        <span class="pill pill-urgent">Urgent</span>
+                      {% else %}
+                        <span class="pill pill-normal">Normal</span>
+                      {% endif %}
+                    </div>
+
+                    <span class="pill">{{ req.status }}</span>
+                  </div>
+
+                  <div class="req-body">
+                    <p class="req-ward">
+                      {{ req.department }}
+                    </p>
+
+                    <div class="req-instruments">
+                      <span class="instruments-label">Instruments:</span>
+                      <div class="instruments-tags">
+                        {% for item in req.instruments %}
+                          <span class="tag-instrument">{{item}}</span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="req-footer">
+                    <span class="submit-time">
+                      {{ req.created_at }}
+                    </span>
+                  </div>
+
+                </a>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <p>No requests found.</p>
+            {% endif %}
       </div>
     </main>
   </div>
@@ -102,43 +149,7 @@
     }
     function fmtEta(m) { return m === 0 ? 'Delivered' : m < 60 ? `~${m} min` : `~${(m/60).toFixed(1)} hr`; }
 
-    function renderList(reqs) {
-      const el = document.getElementById('requestsList');
-      if (!reqs.length) {
-        el.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
-          <i data-lucide="inbox" style="width:40px;height:40px;display:block;margin:0 auto .75rem;"></i>
-          <p>No active requests. Create your first request above.</p></div>`;
-        lucide.createIcons(); return;
-      }
-      el.innerHTML = reqs.map(req => {
-        const color = statusColors[req.status] || '#64748b';
-        const eta   = etaMins(req);
-        return `
-        <a href="nurse-request-details.html?id=${req.id}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
-          <div class="req-header">
-            <div class="req-title-group">
-              <h4 class="req-id">REQ-${String(req.id).padStart(4,'0')}</h4>
-              ${req.priority==='Urgent'
-                ? '<span class="pill pill-urgent">Urgent</span>'
-                : '<span class="pill pill-normal">Normal</span>'}
-            </div>
-            <span class="pill" style="background:${color}20;color:${color};border:1px solid ${color}40;border-radius:999px;padding:2px 10px;font-size:.78rem;">${req.status}</span>
-          </div>
-          <div class="req-body">
-            <p class="req-ward"><i data-lucide="map-pin"></i> ${req.department}</p>
-            <div class="req-instruments">
-              <span class="instruments-label">Instruments:</span>
-              <div class="instruments-tags">${req.items.map(i => `<span class="tag-instrument">${i}</span>`).join('')}</div>
-            </div>
-          </div>
-          <div class="req-footer" style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;padding-top:.75rem;">
-            <span class="submit-time"><i data-lucide="clock" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;"></i> ${req.submitted_at}</span>
-            ${req.status !== 'Delivered' ? `<span class="submit-time" style="color:#0d9488;font-weight:600;"><i data-lucide="timer" style="width:14px;height:14px;vertical-align:middle;margin-right:2px;"></i> ${fmtEta(eta)}</span>` : ''}
-          </div>
-        </a>`;
-      }).join('');
-      lucide.createIcons();
-    }
+
 
     function markRead() {
       MOCK.notifications.forEach(n => n.is_read = true);
