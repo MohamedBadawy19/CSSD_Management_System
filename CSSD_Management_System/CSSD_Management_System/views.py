@@ -14,17 +14,14 @@ from django.utils import timezone
 def login_view(request):
     role_type = request.GET.get('role', 'staff')
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
-
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
         print(form.is_valid())
         if form.is_valid():
-            user = form.get_user()
-            login(request, user)
+            login(request, form.get_user())
             return redirect('dashboard_router')
     else:
         form = EmailLoginForm()
-
     return render(request, template_name, {'form': form})
 
 
@@ -90,8 +87,8 @@ def dashboard_router(request):
 
     elif role == 'Department Nurse':
         return redirect('nurse_dashboard')
-    else:
-        return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
+    return HttpResponse(f"Role '{role}' not recognized.", status=403)
+
 
 
 @login_required
@@ -269,10 +266,28 @@ def cssd_update_request_status(request, pk, status):
     return redirect('cssd_request_detail', pk=pk)
 
 
+# ---------------------------------------------------------------------------
+# US-24: Assign Operator to Batch  ← FEATURE
+# ---------------------------------------------------------------------------
+
+@login_required
+@cssd_staff_required
+def cssd_batch_list(request):
+    """
+    US-24: Lists all sterilization batches, showing assigned operator per batch.
+    """
+    batches = SterilizationBatch.objects.all().order_by('-created_at')
+    return render(request, 'cssd-batch-list.html', {'batches': batches})
+
+
 @login_required
 @cssd_staff_required
 def cssd_batch_create(request):
     """Supporting view: create a sterilization batch to use with this feature."""
+    """
+    US-24: Creates a new sterilization batch and assigns the current user as operator.
+    The logged-in CSSD technician is automatically set as the batch operator.
+    """
     if request.method == 'POST':
         form = SterilizationBatchForm(request.POST)
         if form.is_valid():
@@ -553,3 +568,15 @@ def nurse_sterile_stock(request):
     )
     return render(request, 'nurse-sterile-stock.html',
                   {'packed_requests': packed_requests})
+@login_required
+@cssd_staff_required
+def cssd_batch_detail(request, pk):
+    """
+    US-24: Shows batch details including operator name and linked requests.
+    """
+    batch = get_object_or_404(SterilizationBatch, pk=pk)
+    linked_requests = InstrumentRequest.objects.filter(batch=batch)
+    return render(request, 'cssd-batch-detail.html', {
+        'batch': batch,
+        'linked_requests': linked_requests,
+    })
