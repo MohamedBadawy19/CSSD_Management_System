@@ -1,18 +1,19 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inventory Alerts - CSSD</title>
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="stylesheet" href="../css/extended_styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
     <nav class="dashboard-nav theme-dark-blue">
       <div class="nav-brand">
-        <a href="cssd-dashboard.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <a href="{% url 'dashboard_router' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
         <div class="nav-title">
           <h2>Inventory Alerts</h2>
           <p>Stock Level Monitoring</p>
@@ -21,7 +22,7 @@
       <div class="nav-actions">
         <div class="alert-banner">
           <i data-lucide="alert-triangle"></i>
-          <span id="alertBannerCount">—</span> unacknowledged alerts
+          <span>{{ shortage_count }}</span> unacknowledged alerts
         </div>
       </div>
     </nav>
@@ -36,7 +37,7 @@
               <span class="stat-label">Total Alerts</span>
               <i data-lucide="package" class="stat-icon-small grey"></i>
             </div>
-            <h3 class="stat-value" id="statTotal">—</h3>
+            <h3 class="stat-value">{{ shortage_count }}</h3>
             <p class="stat-desc">Items requiring attention</p>
           </div>
           <div class="stat-card">
@@ -44,7 +45,7 @@
               <span class="stat-label">Critical (Out of Stock)</span>
               <i data-lucide="alert-triangle" class="stat-icon-small red-bg"></i>
             </div>
-            <h3 class="stat-value" id="statCritical">—</h3>
+            <h3 class="stat-value">{{ out_of_stock_count }}</h3>
             <p class="stat-desc">Immediate action needed</p>
           </div>
           <div class="stat-card">
@@ -52,16 +53,132 @@
               <span class="stat-label">Low Stock</span>
               <i data-lucide="package-minus" class="stat-icon-small yellow-bg"></i>
             </div>
-            <h3 class="stat-value" id="statLow">—</h3>
+            <h3 class="stat-value">{{ critical_count }}</h3>
             <p class="stat-desc">Monitor closely</p>
           </div>
         </div>
 
-        <!-- Alert list -->
+        <!-- Category Filter -->
+        {% if categories %}
+        <div class="detail-card" style="padding: 1rem 1.5rem;">
+          <form method="get" action="{% url 'cssd_inventory_alerts' %}"
+                style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--color-text-muted);
+                          text-transform:uppercase; letter-spacing:0.05rem;">
+              Filter by Category
+            </label>
+            <select name="category"
+                    onchange="this.form.submit()"
+                    style="padding:0.5rem 1rem; border:1px solid #e2e8f0;
+                           border-radius:var(--radius-md); font-size:0.9rem;
+                           background:white; color:var(--color-text-dark); cursor:pointer;">
+              <option value="">All Categories</option>
+              {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
+                  {{ cat }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if selected_category %}
+              <a href="{% url 'cssd_inventory_alerts' %}"
+                 style="font-size:0.85rem; color:var(--color-primary);">Clear filter</a>
+            {% endif %}
+          </form>
+        </div>
+        {% endif %}
+
+        <!-- Alert List -->
         <div class="detail-card list-card">
           <div class="card-header pb-border"><h4>Alert Items</h4></div>
-          <div class="alert-list" id="alertList">
-            <!-- populated by JS -->
+          <div class="alert-list">
+
+            {% if alert_data %}
+              {% for entry in alert_data %}
+                {% with item=entry.item severity=entry.severity %}
+                <div class="alert-list-item">
+
+                  <div class="ali-main">
+                    <!-- Title row -->
+                    <div class="ali-title-bar">
+                      <h4>{{ item.name }}</h4>
+                      {% if severity == 'Out of Stock' %}
+                        <span class="pill pill-critical">Out of Stock</span>
+                      {% else %}
+                        <span class="pill pill-critical"
+                              style="background:#fff7ed; color:#c2410c; border-color:#fdba74;">
+                          Critical
+                        </span>
+                      {% endif %}
+                      {% if item.category %}
+                        <span style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;
+                                     padding:0.25rem 0.75rem; border-radius:20px; font-size:0.8rem;">
+                          {{ item.category }}
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <!-- Stock numbers -->
+                    <div class="ali-stats">
+                      <div class="ali-stat">
+                        <span class="as-label">Current Stock</span>
+                        <span class="as-val {% if item.current_stock == 0 %}text-red{% else %}text-yellow{% endif %}">
+                          {{ item.current_stock }}
+                        </span>
+                      </div>
+                      <div class="ali-stat">
+                        <span class="as-label">Min Threshold</span>
+                        <span class="as-val">{{ item.min_threshold }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="stock-progress">
+                      <div class="progress-bar-bg">
+                        <div class="progress-bar-fill
+                                    {% if item.current_stock == 0 %}bg-red{% else %}bg-yellow{% endif %}"
+                             style="width: {% if item.min_threshold > 0 %}{% widthratio item.current_stock item.min_threshold 100 %}{% else %}0{% endif %}%;
+                                    max-width: 100%;">
+                        </div>
+                      </div>
+                      <span class="progress-text">
+                        {{ item.current_stock }} / {{ item.min_threshold }} units (minimum threshold)
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="ali-actions">
+                    <a href="{% url 'cssd_inventory_alerts' %}?category={{ item.category }}"
+                       class="btn-outline"
+                       style="text-align:center; font-size:0.85rem;
+                              text-decoration:none; color:var(--color-text-dark);">
+                      <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                      Filter Category
+                    </a>
+                  </div>
+
+                </div>
+                {% endwith %}
+              {% endfor %}
+
+            {% else %}
+              <!-- Empty state -->
+              <div style="display:flex; flex-direction:column; align-items:center;
+                          padding:3rem; gap:1rem; color:var(--color-text-muted); text-align:center;">
+                <i data-lucide="check-circle" style="width:48px; height:48px; color:#10b981;"></i>
+                <h4 style="margin:0; color:#10b981;">All Stock Levels Healthy</h4>
+                <p style="margin:0; font-size:0.9rem;">
+                  {% if selected_category %}
+                    No alerts found for the selected category.
+                    <a href="{% url 'cssd_inventory_alerts' %}"
+                       style="color:var(--color-primary);">View all categories</a>
+                  {% else %}
+                    No inventory items are below their minimum threshold.
+                  {% endif %}
+                </p>
+              </div>
+            {% endif %}
+
           </div>
         </div>
 
@@ -69,88 +186,6 @@
     </main>
   </div>
 
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/app.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const alerts   = MOCK.getAlerts();
-      const critical = alerts.filter(i => i.current_stock === 0);
-      const low      = alerts.filter(i => i.current_stock > 0 && i.current_stock < 3);
-
-      document.getElementById('statTotal').textContent    = alerts.length;
-      document.getElementById('statCritical').textContent = critical.length;
-      document.getElementById('statLow').textContent      = low.length;
-      document.getElementById('alertBannerCount').textContent = alerts.length;
-
-      const list = document.getElementById('alertList');
-      if (!alerts.length) {
-        list.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><p>🎉 No inventory alerts right now!</p></div>';
-        return;
-      }
-
-      list.innerHTML = alerts.map(item => {
-        const isCritical = item.current_stock === 0;
-        const pct = Math.round((item.current_stock / item.min_stock) * 100);
-        const barColor = isCritical ? '#ef4444' : '#f59e0b';
-        const textColor = isCritical ? '#dc2626' : '#d97706';
-        const status = isCritical ? 'Critical' : 'Low Stock';
-        const pillStyle = isCritical
-          ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
-          : 'background:#fffbeb;color:#d97706;border:1px solid #fcd34d;';
-
-        return `
-        <div class="alert-list-item" id="alert-${item.id}">
-          <div class="ali-main">
-            <div class="ali-title-bar">
-              <h4>${item.name}</h4>
-              <span class="pill" style="${pillStyle}">${status}</span>
-            </div>
-            <div class="ali-stats">
-              <div class="ali-stat">
-                <span class="as-label">Current Stock</span>
-                <span class="as-val" style="color:${textColor};font-weight:700;">${item.current_stock}</span>
-              </div>
-              <div class="ali-stat">
-                <span class="as-label">Minimum Threshold</span>
-                <span class="as-val">${item.min_stock}</span>
-              </div>
-              <div class="ali-stat">
-                <span class="as-label">Category</span>
-                <span class="as-val">${item.category}</span>
-              </div>
-            </div>
-            <div class="stock-progress">
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width:${Math.min(pct,100)}%;background:${barColor};"></div>
-              </div>
-              <span class="progress-text">${pct}% of minimum threshold</span>
-            </div>
-          </div>
-          <div class="ali-actions">
-            <button class="btn-primary" onclick="restockAlert(${item.id}, this)">Request Restock</button>
-            <button class="btn-outline" onclick="acknowledgeAlert(${item.id})">Acknowledge</button>
-          </div>
-        </div>`;
-      }).join('');
-
-      lucide.createIcons();
-    });
-
-    function acknowledgeAlert(id) {
-      const el = document.getElementById(`alert-${id}`);
-      if (el) {
-        el.style.opacity = '0.4';
-        el.style.pointerEvents = 'none';
-        const btn = el.querySelector('.btn-outline');
-        if (btn) { btn.textContent = '✓ Acknowledged'; btn.style.color = '#10b981'; }
-      }
-    }
-
-    function restockAlert(id, btn) {
-      btn.textContent = '✓ Requested';
-      btn.disabled = true;
-      btn.style.background = '#10b981';
-    }
-  </script>
+  <script src="{% static 'script.js' %}"></script>
 </body>
 </html>
