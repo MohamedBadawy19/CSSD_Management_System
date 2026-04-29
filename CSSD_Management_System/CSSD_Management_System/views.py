@@ -8,19 +8,34 @@ from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem
 from .decorators import cssd_staff_required
 from django.contrib import messages
 from django.utils import timezone
+# US-29: View Estimated Completion Time (ETA)
+# This branch isolates only the ETA display feature.
+# Nurses can view the estimated time remaining for their instrument request
+# to complete the sterilization pipeline based on its current status.
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import timedelta
+
+from .forms import EmailLoginForm
+from .decorators import cssd_staff_required
+from .models import InstrumentRequest, RequestItem, InventoryItem, Notification
+
 
 
 @csrf_exempt
 def login_view(request):
     role_type = request.GET.get('role', 'staff')
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
-
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
         print(form.is_valid())
         if form.is_valid():
-            user = form.get_user()
-            login(request, user)
+            login(request, form.get_user())
             return redirect('dashboard_router')
     else:
         form = EmailLoginForm()
@@ -90,8 +105,8 @@ def dashboard_router(request):
 
     elif role == 'Department Nurse':
         return redirect('nurse_dashboard')
-    else:
-        return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
+    return HttpResponse(f"Role '{role}' not recognized.", status=403)
+
 
 
 @login_required
@@ -286,19 +301,6 @@ def cssd_batch_create(request):
     return render(request, 'cssd-batch-create.html', {'form': form})
 
 
-def nurse_request_details(request, request_id):
-    instrument_request = InstrumentRequest.objects.get(id=request_id)
-    if request.user == instrument_request.requester:
-        status = ['Requested', 'Collected', 'Cleaned', 'Sterilized', 'Packed', 'Delivered']
-        request_dict = {
-            'req': instrument_request,
-            'status_order': status,
-            'current_status_index': status.index(instrument_request.status),
-            'items': RequestItem.objects.filter(request=instrument_request),
-        }
-        return render(request, 'nurse-request-details.html', request_dict)
-
-    return HttpResponseForbidden("Access Denined")
 
 
 
@@ -553,3 +555,89 @@ def nurse_sterile_stock(request):
     )
     return render(request, 'nurse-sterile-stock.html',
                   {'packed_requests': packed_requests})
+
+
+
+
+# ---------------------------------------------------------------------------
+# US-29: View Estimated Completion Time  ← FEATURE
+# ---------------------------------------------------------------------------
+
+# Average minutes remaining per status stage
+_ETA_MINUTES = {
+    'Requested':  120,   # ~2 hours: collection + cleaning + sterilization + packing
+    'Collected':   90,   # ~1.5 hours: cleaning + sterilization + packing
+    'Cleaned':     60,   # ~1 hour: sterilization + packing
+    'Sterilized':  30,   # ~30 min: packing + delivery
+    'Packed':      15,   # ~15 min: final delivery
+    'Delivered':    0,
+}
+
+
+def _compute_eta(req):
+    """
+    Calculates ETA string for a given InstrumentRequest based on its current status.
+    Uses the last known timestamp for the current stage as the calculation base.
+    """
+    if req.status == 'Delivered':
+        return 'Ready'
+
+    remaining_minutes = _ETA_MINUTES.get(req.status, 0)
+
+    # Use the most recent stage timestamp as the base, fall back to submitted_at
+    base_time = (
+        req.packed_at or req.sterilized_at or
+        req.cleaned_at or req.collected_at or
+        req.submitted_at or timezone.now()
+    )
+
+    eta_time = base_time + timedelta(minutes=remaining_minutes)
+    now = timezone.now()
+
+    if eta_time <= now:
+        return 'Overdue — awaiting processing'
+
+    delta = eta_time - now
+    total_minutes = int(delta.total_seconds() // 60)
+    hours, mins = divmod(total_minutes, 60)
+
+    if hours > 0:
+        time_str = f'{hours}h {mins}m'
+    else:
+        time_str = f'{mins}m'
+
+    return f'~{time_str} (Ready by {eta_time.strftime("%I:%M %p")})'
+
+
+@login_required
+def nurse_request_details(request, request_id):
+    """
+    US-29: Displays detailed request info including the Estimated Completion Time.
+    The ETA is computed live based on current status and last-updated timestamp.
+    """
+    
+    pk = request_id
+    req = get_object_or_404(InstrumentRequest, pk=pk)
+
+
+    if request.user != req.requester:
+        return HttpResponseForbidden("You can only view your own requests")
+    
+    # Only show ETA for requests belonging to this nurse
+    if req.requester != request.user:
+        messages.error(request, 'You can only view your own requests.')
+        return redirect('nurse_dashboard')
+
+    eta = _compute_eta(req)
+    eta_breakdown = {
+        status: mins
+        for status, mins in _ETA_MINUTES.items()
+        if mins > 0
+    }
+
+    return render(request, 'nurse-request-details.html', {
+        'req': req,
+        'eta': eta,
+        'eta_breakdown': eta_breakdown,
+        'remaining_minutes': _ETA_MINUTES.get(req.status, 0),
+    })
