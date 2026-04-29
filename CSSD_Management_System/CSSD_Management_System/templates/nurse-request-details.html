@@ -1,4 +1,5 @@
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,6 +31,33 @@
 
 <!-- MAIN -->
 <main class="dashboard-main details-main">
+
+  <!-- DELIVERY ACTION -->
+{% if req.status == "Packed" %}
+  <div class="detail-card" style="text-align:center; padding:24px;">
+    <i data-lucide="package-check" style="width:40px;height:40px;color:#0d9488;margin-bottom:12px;"></i>
+    <h4 style="margin-bottom:6px;">Instruments Ready for Collection</h4>
+    <p style="color:#64748b; margin-bottom:20px;">
+      Your instruments have been packed and are ready. Confirm once you have received them.
+    </p>
+    <form method="POST" action="{% url 'mark_delivered' req.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary" style="
+          background:#0d9488; color:white; border:none; padding:10px 28px;
+          border-radius:8px; font-size:15px; cursor:pointer; display:inline-flex;
+          align-items:center; gap:8px;">
+        <i data-lucide="check-circle-2"></i> Confirm Delivery
+      </button>
+    </form>
+  </div>
+{% elif req.status == "Delivered" %}
+  <div class="detail-card" style="text-align:center; padding:24px; background:#f0fdf4;">
+    <i data-lucide="circle-check-big" style="width:40px;height:40px;color:#16a34a;margin-bottom:12px;"></i>
+    <h4 style="color:#15803d;">Delivery Confirmed</h4>
+    <p style="color:#64748b;">You confirmed receipt on {{ req.delivered_at|date:"d M Y, H:i" }}.</p>
+  </div>
+{% endif %}
+
   <div class="container-center">
 
     <!-- SUMMARY -->
@@ -99,34 +127,86 @@
       </div>
 
       <div class="vertical-timeline">
-        {% for status in status_order %}
-          <div class="vt-item">   
-          {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
-              completed
-            {% endif %} 
-          
 
-            {% if not forloop.last %}
-              <div class="vt-line"></div>
-            {% endif %}
-            
-            {% if forloop.counter0 <= current_status_index or req.status == 'Delivered' %}
-            <div class="vt-icon" style = "background-color : green">✔</div>
-            {% else %}
-            <div class="vt-icon" style = "background-color : red"><i data-lucide="x"></i></div>
-            {% endif %}
-
-            
-
-            <div class="vt-content">
-              <h5>{{ status }}</h5>
-              {% if forloop.counter0 <= current_status_index %}
-                <span>{{ req.submitted_at }}</span>
-              {% endif %}
-            </div>
-
+        <!-- Requested -->
+        <div class="vt-item">
+          <div class="vt-icon" style="background-color:green;">✔</div>
+          {% if not forloop.last %}<div class="vt-line"></div>{% endif %}
+          <div class="vt-content">
+            <h5>Requested</h5>
+            <span>{{ req.submitted_at|date:"d M Y, H:i" }}</span>
           </div>
-        {% endfor %}
+        </div>
+
+        <!-- Collected -->
+        <div class="vt-item">
+          {% if req.collected_at %}
+            <div class="vt-icon" style="background-color:green;">✔</div>
+          {% else %}
+            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+          {% endif %}
+          <div class="vt-line"></div>
+          <div class="vt-content">
+            <h5>Collected</h5>
+            {% if req.collected_at %}<span>{{ req.collected_at|date:"d M Y, H:i" }}</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Cleaned -->
+        <div class="vt-item">
+          {% if req.cleaned_at %}
+            <div class="vt-icon" style="background-color:green;">✔</div>
+          {% else %}
+            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+          {% endif %}
+          <div class="vt-line"></div>
+          <div class="vt-content">
+            <h5>Cleaned</h5>
+            {% if req.cleaned_at %}<span>{{ req.cleaned_at|date:"d M Y, H:i" }}</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Sterilized -->
+        <div class="vt-item">
+          {% if req.sterilized_at %}
+            <div class="vt-icon" style="background-color:green;">✔</div>
+          {% else %}
+            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+          {% endif %}
+          <div class="vt-line"></div>
+          <div class="vt-content">
+            <h5>Sterilized</h5>
+            {% if req.sterilized_at %}<span>{{ req.sterilized_at|date:"d M Y, H:i" }}</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Packed -->
+        <div class="vt-item">
+          {% if req.packed_at %}
+            <div class="vt-icon" style="background-color:green;">✔</div>
+          {% else %}
+            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+          {% endif %}
+          <div class="vt-line"></div>
+          <div class="vt-content">
+            <h5>Packed</h5>
+            {% if req.packed_at %}<span>{{ req.packed_at|date:"d M Y, H:i" }}</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Delivered -->
+        <div class="vt-item">
+          {% if req.delivered_at %}
+            <div class="vt-icon" style="background-color:green;">✔</div>
+          {% else %}
+            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+          {% endif %}
+          <div class="vt-content">
+            <h5>Delivered</h5>
+            {% if req.delivered_at %}<span>{{ req.delivered_at|date:"d M Y, H:i" }}</span>{% endif %}
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -148,9 +228,10 @@
 </main>
 
   </div>
-  <script src="{% static 'mock-data.js' %}"></script>
+  <script src="../static/mock-data.js"></script>
   <script src="{% static 'script.js' %}"></script>
   <script>lucide.createIcons();</script>
+
 
 </body>
 </html>

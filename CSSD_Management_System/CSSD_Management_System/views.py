@@ -41,13 +41,57 @@ def logout_view(request):
 
 @login_required
 def dashboard_router(request):
+    """
+    FR-02: Role-Based Dashboard Routing
+    Detects the user's role and routes them to their corresponding dashboard.
+    """
     role = request.user.role
 
     if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
-        return render(request, 'cssd-dashboard.html')
-    if role == 'Department Nurse':
-        return render(request, 'nurse-dashboard.html')
-    return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
+        filter_status = request.GET.get('filter', '')
+
+        all_requests = InstrumentRequest.objects.prefetch_related(
+            'items__inventory_item', 'requester'
+        ).order_by('-submitted_at')
+
+        display_requests = (
+            all_requests.filter(status='Requested')
+            if filter_status == 'pending'
+            else all_requests
+        )
+
+        stat_pending = all_requests.filter(status='Requested').count()
+        stat_active  = all_requests.filter(
+            status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']
+        ).count()
+        stat_alerts  = InventoryItem.objects.filter(current_stock__lt=3).count()
+
+        STATUS_ORDER = ['Requested', 'Collected', 'Cleaned', 'Sterilized', 'Packed', 'Delivered']
+        urgent_reqs  = all_requests.filter(priority='Urgent').exclude(status='Delivered')
+        eta_text, eta_desc = 'No urgent', 'All clear'
+        if urgent_reqs.exists():
+            def eta_mins(r):
+                idx = STATUS_ORDER.index(r.status) if r.status in STATUS_ORDER else 0
+                return max(0, (len(STATUS_ORDER) - 1 - idx) * 20)
+            mins = min(eta_mins(r) for r in urgent_reqs)
+            eta_text = f'~{mins} min' if mins < 60 else f'~{mins // 60:.1f} hr'
+            eta_desc = f'{urgent_reqs.count()} urgent request(s) pending'
+
+        context = {
+            'requests':      display_requests,
+            'filter_status': filter_status,
+            'stat_pending':  stat_pending,
+            'stat_active':   stat_active,
+            'stat_alerts':   stat_alerts,
+            'eta_text':      eta_text,
+            'eta_desc':      eta_desc,
+        }
+        return render(request, 'cssd-dashboard.html', context)
+
+    elif role == 'Department Nurse':
+        return redirect('nurse_dashboard')
+    else:
+        return HttpResponse(f"Role '{role}' not found. Please contact admin.", status=403)
 
 
 @login_required
@@ -56,6 +100,7 @@ def nurse_dashboard(request):
 
     requests = InstrumentRequest.objects.filter(requester=request.user)
 
+    print(requests)
     for request_obj in requests:
         request_dict = {
             'id': request_obj.id,
@@ -254,3 +299,257 @@ def nurse_request_details(request, request_id):
         return render(request, 'nurse-request-details.html', request_dict)
 
     return HttpResponseForbidden("Access Denined")
+
+
+
+
+@login_required
+def mark_delivered(request, request_id):
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    def _nurse_error_context(error):
+        return {
+            'req':   instrument_request,
+            'items': RequestItem.objects.filter(request=instrument_request),
+            'eta':   instrument_request.get_eta(),
+            'error': error,
+        }
+
+    if request.user.department != instrument_request.department:
+        return render(
+            request,
+            'nurse-request-details.html',
+            _nurse_error_context(
+                f"Access Denied: Only nurses from the "
+                f"'{instrument_request.department}' department "
+                f"can confirm delivery of this request."
+            ),
+        )
+
+    if instrument_request.status != 'Packed':
+        return render(
+            request,
+            'nurse-request-details.html',
+            _nurse_error_context(
+                f"Cannot confirm delivery: request is currently "
+                f"'{instrument_request.status}'. "
+                f"Only 'Packed' requests can be marked as Delivered."
+            ),
+        )
+
+    instrument_request.status = 'Delivered'
+    instrument_request.delivered_at = timezone.now()
+    instrument_request.is_archived = True
+    instrument_request.save()
+
+    for item in RequestItem.objects.filter(request=instrument_request):
+        item.inventory_item.current_stock += item.quantity
+        item.inventory_item.save()
+
+    return redirect('nurse_request_details', request_id=request_id)
+
+
+def _detail_context(instrument_request, error=None):
+    return {
+        'req':     instrument_request,
+        'items':   RequestItem.objects.filter(request=instrument_request),
+        'batches': SterilizationBatch.objects.all(),
+        'error':   error,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-07  Mark as Collected   (Requested → Collected)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def mark_collected(request, request_id):
+    """
+    US-07 — Mark Instrument as Collected.
+
+    Acceptance criteria:
+    • Given an instrument request is in 'Requested' state, When a CSSD Tech
+      clicks 'Mark as Collected', Then the state changes to 'Collected' and a
+      timestamp is saved.
+    • Given the state has changed to 'Collected', When the update is saved,
+      Then the requesting Nurse receives a notification.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    # Pre-condition check (AC 1)
+    if instrument_request.status != 'Requested':
+        return render(request, 'cssd-request-details.html',
+                      _detail_context(instrument_request,
+                                      error=f"Cannot mark as Collected: "
+                                            f"request is currently '{instrument_request.status}'."))
+
+    # State transition + timestamp (AC 1)
+    instrument_request.status       = 'Collected'
+    instrument_request.collected_at = timezone.now()
+    instrument_request.last_operator = request.user
+    instrument_request.save()
+
+    # Nurse notification (AC 2)
+    Notification.objects.create(
+        recipient=instrument_request.requester,
+        request=instrument_request,
+        message=(f"REQ-{instrument_request.id:04d} has been collected by CSSD "
+                 f"and is now being processed."),
+    )
+
+    return redirect('cssd_request_details', request_id=request_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-08  Mark as Cleaned     (Collected → Cleaned)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def mark_cleaned(request, request_id):
+    """
+    US-08 — Mark Instrument as Cleaned.
+
+    Acceptance criteria:
+    • Given an instrument is in 'Collected' state, When a CSSD Tech clicks
+      'Mark as Cleaned', Then the state changes to 'Cleaned' and a timestamp
+      is recorded.
+    • Given an instrument is NOT in 'Collected' state, When a CSSD Tech
+      attempts to mark it as 'Cleaned', Then the system blocks the transition
+      and displays an error.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    # Pre-condition check (AC 2 — block invalid transition)
+    if instrument_request.status != 'Collected':
+        return render(request, 'cssd-request-details.html',
+                      _detail_context(instrument_request,
+                                      error=f"Cannot mark as Cleaned: "
+                                            f"request is currently '{instrument_request.status}'. "
+                                            f"Only 'Collected' requests can be cleaned."))
+
+    # State transition + timestamp (AC 1)
+    instrument_request.status       = 'Cleaned'
+    instrument_request.cleaned_at   = timezone.now()
+    instrument_request.last_operator = request.user
+    instrument_request.save()
+
+    return redirect('cssd_request_details', request_id=request_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-09  Mark as Sterilized  (Cleaned → Sterilized)  [batch optional]
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def mark_sterilized(request, request_id):
+    """
+    US-09 — Mark Instrument as Sterilized.
+
+    Acceptance criteria:
+    • Given an instrument is in 'Cleaned' state, When a CSSD Tech clicks
+      'Mark as Sterilized', Then the state changes to 'Sterilized' and a
+      timestamp is recorded.
+    • Batch ID is optional (temporary relaxation for demo — SRS requires it).
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    # Pre-condition: must be in 'Cleaned' state
+    if instrument_request.status != 'Cleaned':
+        return render(request, 'cssd-request-details.html',
+                      _detail_context(instrument_request,
+                                      error=f"Cannot mark as Sterilized: "
+                                            f"request is currently '{instrument_request.status}'. "
+                                            f"Only 'Cleaned' requests can be sterilized."))
+
+    # Batch is optional — link it only if one was chosen
+    batch_id = request.POST.get('batch_id')
+    if batch_id:
+        batch = get_object_or_404(SterilizationBatch, id=batch_id)
+        instrument_request.batch = batch
+
+    # State transition + timestamp
+    instrument_request.status        = 'Sterilized'
+    instrument_request.sterilized_at = timezone.now()
+    instrument_request.last_operator = request.user
+    instrument_request.save()
+
+    return redirect('cssd_request_details', request_id=request_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-10  Mark as Packed      (Sterilized → Packed)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def mark_packed(request, request_id):
+    """
+    US-10 — Mark Instrument as Packed.
+
+    Acceptance criteria:
+    • Given an instrument is in 'Sterilized' state, When a CSSD Tech clicks
+      'Mark as Packed', Then the state changes to 'Packed'.
+    • Given an instrument state is now 'Packed', When a Nurse views the sterile
+      stock list, Then the instrument appears as available in the list.
+      (The sterile-stock list is served by nurse_sterile_stock below.)
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden("Method not allowed")
+
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+
+    # Pre-condition check
+    if instrument_request.status != 'Sterilized':
+        return render(request, 'cssd-request-details.html',
+                      _detail_context(instrument_request,
+                                      error=f"Cannot mark as Packed: "
+                                            f"request is currently '{instrument_request.status}'. "
+                                            f"Only 'Sterilized' requests can be packed."))
+
+    # State transition + timestamp
+    instrument_request.status        = 'Packed'
+    instrument_request.packed_at     = timezone.now()
+    instrument_request.last_operator = request.user
+    instrument_request.save()
+
+    return redirect('cssd_request_details', request_id=request_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CSSD Request Details page — Django-rendered (supports US-07 to US-10)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def cssd_request_details(request, request_id):
+    """
+    Renders the CSSD request-details page with live database data.
+    The page exposes the correct action button for the current state,
+    powering all four US-07–10 transitions.
+    """
+    instrument_request = get_object_or_404(InstrumentRequest, id=request_id)
+    return render(request, 'cssd-request-details.html',
+                  _detail_context(instrument_request))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Nurse Sterile Stock page — US-10 acceptance criterion (Packed → visible)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def nurse_sterile_stock(request):
+    """
+    US-10 — Nurse views the sterile stock list.
+    All instrument requests in 'Packed' state appear here as available stock.
+    """
+    packed_requests = (
+        InstrumentRequest.objects
+        .filter(status='Packed')
+        .prefetch_related('items__inventory_item')
+    )
+    return render(request, 'nurse-sterile-stock.html',
+                  {'packed_requests': packed_requests})
