@@ -38,6 +38,10 @@
         </div>
       </div>
       <div class="nav-actions">
+        <a href="{% url 'cssd_batch_create' %}" class="nav-action-link" id="newBatchBtn">
+          <i data-lucide="flask-conical" style="width:14px;height:14px;"></i>
+          New Batch
+        </a>
         <a href="{% url 'dashboard_router' %}?filter={% if filter_status == 'pending' %}{% else %}pending{% endif %}"
            class="nav-action-link"
            id="filterPendingBtn">
