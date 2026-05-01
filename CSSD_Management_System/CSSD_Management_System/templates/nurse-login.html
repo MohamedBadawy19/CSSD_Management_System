@@ -42,6 +42,7 @@
 
           <!-- PROJ-12: Nurse Login -->
           <form id="loginForm" data-role="Nurse" action="{% url 'login' %}" method ="post">
+            {% csrf_token %}
             <div class="form-group">
               <label class="form-label">Email Address</label>
               <div class="input-wrapper">

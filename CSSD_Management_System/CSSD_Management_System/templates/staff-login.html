@@ -42,6 +42,7 @@
 
           <!-- PROJ-11: CSSD Staff Login -->
           <form id="loginForm" data-role="Staff" action="{% url 'login' %}" method = 'post'>
+            {% csrf_token %}
             <div class="form-group">
               <label class="form-label">Email Address</label>
               <div class="input-wrapper">
