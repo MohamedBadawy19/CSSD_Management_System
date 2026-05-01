@@ -168,7 +168,7 @@ def save_instrument_request(request):
     if request.method == 'POST':
         instruments = request.POST.getlist('instruments')
         if len(instruments) < 1:
-            messages.warning(request , "You must enter Quanitiy !")
+            messages.warning(request , "You must enter Quanitiy or select instrument !")
             return redirect('nurse_create_request')
         priority = request.POST.get('priority')
         notes = request.POST.get('notes')
