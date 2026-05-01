@@ -48,4 +48,6 @@ urlpatterns = [
     path('dashboard/cssd/batches/', views.cssd_batch_list, name='cssd_batch_list'),
     path('dashboard/cssd/batches/create/', views.cssd_batch_create, name='cssd_batch_create'),
     path('dashboard/cssd/batches/<int:pk>/', views.cssd_batch_detail, name='cssd_batch_detail'),
+    # US-27: View Inventory Shortage Alerts
+    path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
 ]
