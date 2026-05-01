@@ -27,7 +27,17 @@ from .models import InstrumentRequest, RequestItem, InventoryItem, Notification
 
 
 
-@csrf_exempt
+# US-27: View Inventory Shortage Alerts
+# CSSD staff can view items whose current stock is at or below the minimum threshold.
+
+
+
+
+
+
+
+
+
 def login_view(request):
     role_type = request.GET.get('role', 'staff')
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
@@ -640,4 +650,50 @@ def nurse_request_details(request, request_id):
         'eta': eta,
         'eta_breakdown': eta_breakdown,
         'remaining_minutes': _ETA_MINUTES.get(req.status, 0),
+    })
+# ---------------------------------------------------------------------------
+# US-27: View Inventory Shortage Alerts  ← FEATURE
+# ---------------------------------------------------------------------------
+
+@login_required
+@cssd_staff_required
+def cssd_inventory_alerts(request):
+    """
+    US-27: Displays all inventory items whose current_stock is at or below
+    their min_threshold, alerting CSSD staff to restock before shortages occur.
+    Items are categorised as:
+      - 'Out of Stock'  : current_stock == 0
+      - 'Critical'      : 0 < current_stock <= min_threshold
+    """
+    category_filter = request.GET.get('category', '')
+
+    from django.db.models import F
+    shortage_items = InventoryItem.objects.filter(
+        current_stock__lte=F('min_threshold')
+    ).order_by('current_stock', 'name')
+
+    if category_filter:
+        shortage_items = shortage_items.filter(category=category_filter)
+
+    categories = InventoryItem.objects.values_list('category', flat=True).distinct()
+
+    # Annotate severity label
+    alert_data = []
+    for item in shortage_items:
+        if item.current_stock == 0:
+            severity = 'Out of Stock'
+        else:
+            severity = 'Critical'
+        alert_data.append({'item': item, 'severity': severity})
+
+    out_of_stock_count = sum(1 for entry in alert_data if entry['severity'] == 'Out of Stock')
+    critical_count = sum(1 for entry in alert_data if entry['severity'] == 'Critical')
+
+    return render(request, 'cssd-inventory-alerts.html', {
+        'alert_data': alert_data,
+        'shortage_count': shortage_items.count(),
+        'out_of_stock_count': out_of_stock_count,
+        'critical_count': critical_count,
+        'categories': categories,
+        'selected_category': category_filter,
     })

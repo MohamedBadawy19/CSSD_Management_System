@@ -44,4 +44,6 @@ urlpatterns = [
         views.nurse_sterile_stock,
         name='nurse_sterile_stock',
     ),
+    # US-27: View Inventory Shortage Alerts
+    path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
 ]
