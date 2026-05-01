@@ -22,7 +22,11 @@
       <div class="nav-actions">
         <button class="icon-btn notification-btn" id="notifBtn" title="Notifications">
           <i data-lucide="bell"></i>
-          <span class="notification-badge" id="notifBadge" style="display:none;"></span>
+          {% if notif_count %}
+            <span class="notification-badge" id="notifBadge">{{ notif_count }}</span>
+          {% else %}
+            <span class="notification-badge" id="notifBadge" style="display:none;"></span>
+          {% endif %}
         </button>
         <a href="{% url 'nurse_sterile_stock' %}" class="nav-action-link">
           <i data-lucide="package-check"></i> Sterile Stock
@@ -34,11 +38,25 @@
     <main class="dashboard-main">
       <div class="dashboard-container">
 
-        <div id="notifBanner" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem;margin-bottom:1rem;">
-          <strong style="color:#16a34a;font-size:.85rem;">New updates</strong>
-          <div id="notifList"></div>
-          <button onclick="markRead()" style="font-size:.75rem;color:#16a34a;margin-top:.5rem;background:none;border:none;cursor:pointer;padding:0;">Mark all as read</button>
+        {% if notifications %}
+        <div id="notifBanner" style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+          <strong style="color:#16a34a;font-size:.85rem;">🔔 New updates ({{ notif_count }})</strong>
+          <ul style="margin:.5rem 0 .75rem 0;padding-left:1.25rem;">
+            {% for notif in notifications %}
+              <li style="font-size:.85rem;color:#374151;margin-bottom:.25rem;">
+                {{ notif.message }}
+                <span style="color:#94a3b8;font-size:.75rem;"> — {{ notif.created_at|date:"M d, H:i" }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <form method="POST" action="{% url 'nurse_mark_notifications_read' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" style="font-size:.75rem;color:#16a34a;margin-top:.25rem;background:none;border:none;cursor:pointer;padding:0;">Mark all as read</button>
+          </form>
         </div>
+        {% else %}
+        <div id="notifBanner" style="display:none;"></div>
+        {% endif %}
 
         <div class="action-header">
           <a href="{% url 'nurse_create_request' %}" class="btn-create-request" style="text-decoration:none;">
@@ -77,7 +95,7 @@
           {% if requests %}
             {% for req in requests %}
               {% if req.status != "Delivered" %}
-              <a href="/nurse_request_details/{{ req.id }}/" class="request-card" style="text-decoration:none;color:inherit;display:block;">
+              <a href="{% url 'nurse_request_details' req.id %}" class="request-card" style="text-decoration:none;color:inherit;display:block;">
                 <div class="req-header">
                   <div class="req-title-group">
                     <h4 class="req-id">REQ-{{ req.id|stringformat:"04d" }}</h4>
@@ -116,7 +134,6 @@
     </main>
   </div>
 
-  <script src="../static/mock-data.js"></script>
   <script src="{% static 'script.js' %}"></script>
 </body>
 </html>

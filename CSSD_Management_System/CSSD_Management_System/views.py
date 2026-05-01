@@ -135,15 +135,31 @@ def nurse_dashboard(request):
         }
         final_requests.append(request_dict)
 
+    unread_notifications = Notification.objects.filter(
+        recipient=request.user, is_read=False
+    ).order_by('-created_at')
+
     context = {
         'requests': final_requests,
         'total': len(requests),
         'in_progress': len(requests.filter(status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed'])),
         'urgent': len(requests.filter(priority='Urgent')),
-        'delivered': len(requests.filter(priority='Delivered')),
+        'delivered': len(requests.filter(status='Delivered')),
+        'notifications': unread_notifications,
+        'notif_count': unread_notifications.count(),
     }
 
     return render(request, 'nurse-dashboard.html', context)
+
+
+
+@login_required
+def nurse_mark_notifications_read(request):
+    """Mark all unread notifications for the current nurse as read."""
+    if request.method == 'POST':
+        Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return redirect('nurse_dashboard')
+
 
 
 def get_instruments():
@@ -156,6 +172,7 @@ def get_instruments():
             'min_threshold': instrument.min_threshold,
         })
     return instruments
+
 
 
 @login_required

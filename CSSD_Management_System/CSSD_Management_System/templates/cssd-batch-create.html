@@ -1,71 +1,77 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Sterilization Batch - CSSD</title>
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="stylesheet" href="../css/extended_styles.css">
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
     <nav class="dashboard-nav theme-dark-blue">
       <div class="nav-brand">
-        <a href="cssd-batch-list.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
-        <div class="nav-title"><h2>New Sterilization Batch</h2><p>Log batch details</p></div>
+        <a href="{% url 'cssd_dashboard' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <div class="nav-title">
+          <h2>New Sterilization Batch</h2>
+          <p>Log batch details</p>
+        </div>
       </div>
     </nav>
 
     <main class="dashboard-main form-main">
       <div class="container-center form-container">
 
-        <div id="successMsg" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;font-size:.875rem;">
-          ✓ Batch created successfully!
-        </div>
+        {% if messages %}
+          {% for msg in messages %}
+            <div style="background:{% if msg.tags == 'error' %}#fef2f2{% else %}#f0fdf4{% endif %};border:1px solid {% if msg.tags == 'error' %}#fecaca{% else %}#86efac{% endif %};border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:{% if msg.tags == 'error' %}#dc2626{% else %}#16a34a{% endif %};font-size:.875rem;">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
 
-        <form id="batchForm">
+        <form method="POST" action="{% url 'cssd_batch_create' %}">
+          {% csrf_token %}
 
-          <!-- Operator (read-only) -->
+          <!-- Operator (read-only display) -->
           <div class="form-section">
             <label class="form-label">OPERATOR (AUTO-ASSIGNED)</label>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.75rem 1rem;font-size:.875rem;color:#374151;display:flex;align-items:center;gap:.5rem;">
               <i data-lucide="user" style="width:16px;height:16px;color:#64748b;"></i>
-              <strong>sara@hospital.com</strong>
-              <span style="color:#94a3b8;font-size:.8rem;">— CSSD Technician</span>
+              <strong>{{ request.user.email }}</strong>
+              <span style="color:#94a3b8;font-size:.8rem;">— {{ request.user.role }}</span>
             </div>
-          </div>
-
-          <!-- Method -->
-          <div class="form-section">
-            <label class="form-label">STERILIZATION METHOD <span style="color:#ef4444;">*</span></label>
-            <select id="inputMethod" class="form-input" style="border:1px solid #e2e8f0;padding:.6rem .75rem;border-radius:8px;font-size:.875rem;width:100%;" required>
-              <option value="">— Select Method —</option>
-              <option value="Steam Autoclave">Steam Autoclave</option>
-              <option value="ETO">ETO (Ethylene Oxide)</option>
-              <option value="Dry Heat">Dry Heat</option>
-              <option value="Plasma">Hydrogen Peroxide Plasma</option>
-            </select>
           </div>
 
           <!-- Temperature -->
           <div class="form-section">
-            <label class="form-label">TEMPERATURE (°C) <span style="color:#ef4444;">*</span></label>
-            <input type="number" id="inputTemp" class="form-input" placeholder="e.g. 134" min="60" max="200" required style="border:1px solid #e2e8f0;padding:.6rem .75rem;border-radius:8px;font-size:.875rem;width:100%;">
+            <label class="form-label" for="id_temperature">
+              TEMPERATURE (°C) <span style="color:#ef4444;">*</span>
+            </label>
+            <input type="number" name="temperature" id="id_temperature"
+                   class="form-input" placeholder="e.g. 134" min="121" step="0.1" required
+                   style="border:1px solid #e2e8f0;padding:.6rem .75rem;border-radius:8px;font-size:.875rem;width:100%;"
+                   {% if form.temperature.value %}value="{{ form.temperature.value }}"{% endif %}>
+            {% if form.temperature.errors %}
+              <p style="color:#ef4444;font-size:.75rem;margin-top:.25rem;">{{ form.temperature.errors.0 }}</p>
+            {% endif %}
             <p style="font-size:.75rem;color:#94a3b8;margin-top:.35rem;">Minimum required: 121°C for compliance</p>
-            <p id="tempWarning" style="font-size:.75rem;color:#ef4444;margin-top:.25rem;display:none;">⚠ Temperature below minimum 121°C compliance threshold.</p>
           </div>
 
-          <!-- Duration -->
+          <!-- Cycle Duration -->
           <div class="form-section">
-            <label class="form-label">CYCLE DURATION (minutes) <span style="color:#ef4444;">*</span></label>
-            <input type="number" id="inputDuration" class="form-input" placeholder="e.g. 18" min="1" required style="border:1px solid #e2e8f0;padding:.6rem .75rem;border-radius:8px;font-size:.875rem;width:100%;">
-          </div>
-
-          <!-- Notes -->
-          <div class="form-section">
-            <label class="form-label">NOTES (OPTIONAL)</label>
-            <textarea id="inputNotes" class="form-textarea" placeholder="Any additional batch notes…"></textarea>
+            <label class="form-label" for="id_cycle_duration">
+              CYCLE DURATION (minutes) <span style="color:#ef4444;">*</span>
+            </label>
+            <input type="number" name="cycle_duration" id="id_cycle_duration"
+                   class="form-input" placeholder="e.g. 18" min="1" step="1" required
+                   style="border:1px solid #e2e8f0;padding:.6rem .75rem;border-radius:8px;font-size:.875rem;width:100%;"
+                   {% if form.cycle_duration.value %}value="{{ form.cycle_duration.value }}"{% endif %}>
+            {% if form.cycle_duration.errors %}
+              <p style="color:#ef4444;font-size:.75rem;margin-top:.25rem;">{{ form.cycle_duration.errors.0 }}</p>
+            {% endif %}
           </div>
 
           <!-- Lock notice -->
@@ -75,44 +81,16 @@
           </div>
 
           <div class="form-actions" style="margin-top:1.5rem;">
-            <button type="submit" class="btn-submit active">
+            <button type="submit" class="btn-submit active" id="btn-create-batch">
               <i data-lucide="flask-conical"></i> Create Batch
             </button>
-            <a href="cssd-batch-list.html" class="btn-outline">Cancel</a>
+            <a href="{% url 'cssd_dashboard' %}" class="btn-outline">Cancel</a>
           </div>
         </form>
+
       </div>
     </main>
   </div>
-
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/app.js"></script>
-  <script>
-    document.getElementById('inputTemp').addEventListener('input', function() {
-      const warn = document.getElementById('tempWarning');
-      warn.style.display = this.value && parseInt(this.value) < 121 ? '' : 'none';
-    });
-
-    document.getElementById('batchForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const method   = document.getElementById('inputMethod').value;
-      const temp     = parseInt(document.getElementById('inputTemp').value);
-      const duration = parseInt(document.getElementById('inputDuration').value);
-      const notes    = document.getElementById('inputNotes').value;
-
-      if (!method || !temp || !duration) return;
-
-      const newId = Math.max(...MOCK.batches.map(b => b.id)) + 1;
-      MOCK.batches.unshift({
-        id: newId, method, temperature: temp, duration, status: 'In Progress',
-        operator: 'sara@hospital.com',
-        created_at: new Date().toLocaleString('en-GB').replace(',',''), notes
-      });
-
-      document.getElementById('successMsg').style.display = '';
-      this.reset();
-      setTimeout(() => { location.href = 'cssd-batch-list.html'; }, 1200);
-    });
-  </script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
