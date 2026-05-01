@@ -24,11 +24,20 @@
     <main class="dashboard-main form-main">
       <div class="container-center form-container">
 
-        {% if warning %}
+        
+          {% if warning or messages %}
         <div id="errorBanner" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#b91c1c;">
+          {% for message in messages %}
+            <p> ⚠{{ message }}</p>
+          {% endfor %}
+          
+          {% if warning %}
           ⚠ {{ warning }}
+          {% endif %}
+
         </div>
         {% endif %}
+        
         <div id="successBanner" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;"></div>
 
         <form id="createForm" method="post" action="{% url 'save_instrument_request' %}">

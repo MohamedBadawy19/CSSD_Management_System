@@ -43,7 +43,7 @@ def login_view(request):
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
-        print(form.is_valid())
+        
         if form.is_valid():
             login(request, form.get_user())
             return redirect('dashboard_router')
@@ -89,7 +89,6 @@ def dashboard_router(request):
             status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']
         ).count()
         stat_alerts  = InventoryItem.objects.filter(current_stock__lt=3).count()
-
         STATUS_ORDER = ['Requested', 'Collected', 'Cleaned', 'Sterilized', 'Packed', 'Delivered']
         urgent_reqs  = all_requests.filter(priority='Urgent').exclude(status='Delivered')
         eta_text, eta_desc = 'No urgent', 'All clear'
@@ -124,7 +123,7 @@ def nurse_dashboard(request):
 
     requests = InstrumentRequest.objects.filter(requester=request.user)
 
-    print(requests)
+    
     for request_obj in requests:
         request_dict = {
             'id': request_obj.id,
@@ -168,6 +167,9 @@ def nurse_create_request(request):
 def save_instrument_request(request):
     if request.method == 'POST':
         instruments = request.POST.getlist('instruments')
+        if len(instruments) < 1:
+            messages.warning(request , "You must enter Quanitiy !")
+            return redirect('nurse_create_request')
         priority = request.POST.get('priority')
         notes = request.POST.get('notes')
 
