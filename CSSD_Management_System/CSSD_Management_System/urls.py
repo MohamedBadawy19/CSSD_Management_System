@@ -50,6 +50,9 @@ urlpatterns = [
     path('dashboard/cssd/batches/<int:pk>/', views.cssd_batch_detail, name='cssd_batch_detail'),
     # US-27: View Inventory Shortage Alerts
     path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
+    # PROJ-31: Hospital Admin Report & Audit History
+    path('dashboard/hospital/', views.hospital_report, name='hospital_report'),
+    path('dashboard/hospital/audit/', views.hospital_audit, name='hospital_audit'),
     # Nurse notifications
     path('dashboard/nurse/notifications/mark-read/', views.nurse_mark_notifications_read, name='nurse_mark_notifications_read'),
 ]

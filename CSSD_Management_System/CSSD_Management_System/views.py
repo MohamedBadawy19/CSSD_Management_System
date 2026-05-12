@@ -5,7 +5,7 @@ from .forms import EmailLoginForm, SterilizationBatchForm
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem, Notification, SterilizationBatch
-from .decorators import cssd_staff_required
+from .decorators import cssd_staff_required, hospital_admin_required
 from django.contrib import messages
 from django.utils import timezone
 # US-29: View Estimated Completion Time (ETA)
@@ -71,7 +71,10 @@ def dashboard_router(request):
     """
     role = request.user.role
 
-    if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
+    if role == 'Hospital Administrator':
+        return redirect('hospital_report')
+
+    if role in ['CSSD Technician', 'System Administrator']:
         filter_status = request.GET.get('filter', '')
 
         all_requests = InstrumentRequest.objects.prefetch_related(
@@ -742,4 +745,98 @@ def cssd_inventory_alerts(request):
         'critical_count': critical_count,
         'categories': categories,
         'selected_category': category_filter,
+    })
+
+
+# ---------------------------------------------------------------------------
+# US-31: Search Instrument Audit History  ← FEATURE (PROJ-31)
+# ---------------------------------------------------------------------------
+
+@login_required
+@hospital_admin_required
+def hospital_report(request):
+    """
+    Hospital Admin daily sterilization report dashboard.
+    Shows batch statistics for a selected date, with a link to the audit page.
+    """
+    from datetime import date, datetime
+
+    date_str = request.GET.get('date', '')
+    try:
+        report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        report_date = date.today()
+        date_str = report_date.strftime('%Y-%m-%d')
+
+    batches = SterilizationBatch.objects.filter(
+        created_at__date=report_date
+    ).select_related('operator').order_by('-created_at')
+
+    # Count requests that were sterilized on this date
+    total_sterilized = InstrumentRequest.objects.filter(
+        sterilized_at__date=report_date
+    ).count()
+
+    # Distinct operators active on this date
+    operators = batches.values_list('operator__email', flat=True).distinct()
+
+    return render(request, 'hospital-report.html', {
+        'batches': batches,
+        'total_batches': batches.count(),
+        'total_sterilized': total_sterilized,
+        'operators': list(operators),
+        'report_date': report_date,
+        'date_str': date_str,
+    })
+
+
+@login_required
+@hospital_admin_required
+def hospital_audit(request):
+    """
+    US-31 / PROJ-31: Search Instrument Audit History.
+
+    Acceptance criteria:
+    • Given I am logged in as a Hospital Admin, When I search by instrument
+      set ID or name, Then the system returns the full lifecycle timeline with
+      every state change, timestamp, and operator name.
+    • Given I am viewing an instrument's audit history, When I try to edit
+      any entry, Then the system blocks editing and all results remain read-only.
+
+    Search supports:
+    - Request ID: "REQ-0001", "0001", or just "1"
+    - Instrument name: partial match against InventoryItem names in RequestItems
+    """
+    query = request.GET.get('q', '').strip()
+    results = []
+
+    if query:
+        from django.db.models import Q
+        import re
+
+        # Try to extract a numeric ID from patterns like "REQ-0001", "0001", or "1"
+        id_match = re.search(r'(\d+)', query)
+        numeric_id = int(id_match.group(1)) if id_match else None
+
+        # Build query: match by request ID OR by instrument name in request items
+        filters = Q()
+
+        if numeric_id is not None:
+            filters |= Q(pk=numeric_id)
+
+        # Search by instrument name (via RequestItem → InventoryItem)
+        filters |= Q(items__inventory_item__name__icontains=query)
+
+        results = (
+            InstrumentRequest.objects
+            .filter(filters)
+            .select_related('requester', 'last_operator', 'batch__operator')
+            .prefetch_related('items__inventory_item')
+            .distinct()
+            .order_by('-submitted_at')
+        )
+
+    return render(request, 'hospital-audit.html', {
+        'query': query,
+        'results': results,
     })
