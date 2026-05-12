@@ -9,6 +9,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_router, name='dashboard_router'),
     path('dashboard/cssd/', views.cssd_dashboard, name='cssd_dashboard'),
+    path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
     path('dashboard/cssd/request/<int:pk>/', views.cssd_request_detail, name='cssd_request_detail'),
     # US-19: Mark as Sterilized
     path('dashboard/cssd/request/<int:pk>/update/<str:status>/', views.cssd_update_request_status, name='cssd_update_request_status'),
@@ -17,6 +18,7 @@ urlpatterns = [
     path('dashboard/nurse/', views.nurse_dashboard, name='nurse_dashboard'),
     path('nurse_create_request/', views.nurse_create_request, name='nurse_create_request'),
     path('nurse_request_details/<int:request_id>/', views.nurse_request_details, name='nurse_request_details'),
+    path('nurse_request_detail/<int:pk>/', views.nurse_request_detail_compat, name='nurse_request_detail'),
     path('save_instrument_request/', views.save_instrument_request, name='save_instrument_request'),
     path('requests/<int:request_id>/deliver/', views.mark_delivered, name='mark_delivered'),
     path('requests/<int:request_id>/mark_collected/',views.mark_collected,name='mark_collected'),
@@ -34,7 +36,8 @@ urlpatterns = [
         'requests/<int:request_id>/mark_packed/',
         views.mark_packed,
         name='mark_packed',
-    ),path(
+    ),
+    path(
         'cssd_request_details/<int:request_id>/',
         views.cssd_request_details,
         name='cssd_request_details',
@@ -48,8 +51,8 @@ urlpatterns = [
     path('dashboard/cssd/batches/', views.cssd_batch_list, name='cssd_batch_list'),
     path('dashboard/cssd/batches/create/', views.cssd_batch_create, name='cssd_batch_create'),
     path('dashboard/cssd/batches/<int:pk>/', views.cssd_batch_detail, name='cssd_batch_detail'),
-    # US-27: View Inventory Shortage Alerts
-    path('dashboard/cssd/alerts/', views.cssd_inventory_alerts, name='cssd_inventory_alerts'),
-    # Nurse notifications
     path('dashboard/nurse/notifications/mark-read/', views.nurse_mark_notifications_read, name='nurse_mark_notifications_read'),
+    # Hospital Report
+    path('dashboard/admin/report/', views.hospital_report, name='hospital_report'),
+    path('dashboard/admin/audit/', views.hospital_audit, name='hospital_audit'),
 ]

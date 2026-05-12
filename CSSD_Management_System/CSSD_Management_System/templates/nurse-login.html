@@ -1,5 +1,5 @@
-﻿﻿{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -41,8 +41,9 @@
           </div>
 
           <!-- PROJ-12: Nurse Login -->
-          <form id="loginForm" data-role="Nurse" action="{% url 'login' %}" method ="post">
+          <form id="loginForm" data-role="Nurse" action="{% url 'login' %}?role=nurse" method="post">
             {% csrf_token %}
+            <input type="hidden" name="portal_role" value="nurse">
             <div class="form-group">
               <label class="form-label">Email Address</label>
               <div class="input-wrapper">

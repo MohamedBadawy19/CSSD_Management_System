@@ -26,7 +26,7 @@ class AuthenticationTests(TestCase):
                 {"username": "nurse@example.com", "password": "password123"},
             )
         self.assertRedirects(
-            response, reverse("dashboard_router"), fetch_redirect_response=False
+            response, reverse("nurse_dashboard"), fetch_redirect_response=False
         )
 
     @patch("authentication.views.logout")

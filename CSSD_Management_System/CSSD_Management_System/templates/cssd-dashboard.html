@@ -42,6 +42,12 @@
           <i data-lucide="flask-conical" style="width:14px;height:14px;"></i>
           New Batch
         </a>
+        {% if request.user.role == 'Hospital Administrator' %}
+        <a href="{% url 'hospital_report' %}" class="nav-action-link">
+          <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+          Daily Report
+        </a>
+        {% endif %}
         <a href="{% url 'dashboard_router' %}?filter={% if filter_status == 'pending' %}{% else %}pending{% endif %}"
            class="nav-action-link"
            id="filterPendingBtn">

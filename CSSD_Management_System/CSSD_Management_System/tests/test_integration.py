@@ -61,8 +61,9 @@ class HomeAndAuthTest(TestCase):
 
     def test_cssd_login_routes_to_cssd_dashboard(self):
         self.client.login(email='cssd@test.com', password='Test1234!')
-        r = self.client.get(reverse('dashboard_router'), follow=True)
-        self.assertRedirects(r, reverse('cssd_dashboard'), fetch_redirect_response=False)
+        r = self.client.get(reverse('dashboard_router'))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, 'cssd-dashboard.html')
 
     def test_wrong_password_shows_error(self):
         r = self.client.post(reverse('login'), {'username': 'nurse@test.com', 'password': 'wrong'}, follow=True)
