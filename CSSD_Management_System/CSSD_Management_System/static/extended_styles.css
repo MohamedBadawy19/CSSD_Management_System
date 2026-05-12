@@ -90,19 +90,29 @@
 .vt-content h5 { margin: 0 0 0.25rem 0; color: var(--color-text-dark); }
 .vt-content span { font-size: 0.85rem; color: var(--color-text-muted); }
 /* Dynamic Step Colors (Vertical Timeline) */
-.vt-item.step-submitted.completed .vt-icon, .vt-item.step-submitted.completed .vt-line { background: #3b82f6; }
-.vt-item.step-collected.completed .vt-icon, .vt-item.step-collected.completed .vt-line { background: #8b5cf6; }
-.vt-item.step-cleaned.completed .vt-icon, .vt-item.step-cleaned.completed .vt-line { background: #06b6d4; }
-.vt-item.step-sterilized.completed .vt-icon, .vt-item.step-sterilized.completed .vt-line { background: #f59e0b; }
-.vt-item.step-packed.completed .vt-icon, .vt-item.step-packed.completed .vt-line { background: #10b981; }
-.vt-item.step-delivered.completed .vt-icon, .vt-item.step-delivered.completed .vt-line { background: #059669; }
+.vt-item.step-submitted .vt-icon, .vt-item.step-submitted .vt-line { background: #f97316; }
+.vt-item.step-collected .vt-icon, .vt-item.step-collected .vt-line { background: #2563eb; }
+.vt-item.step-cleaned .vt-icon, .vt-item.step-cleaned .vt-line { background: #06b6d4; }
+.vt-item.step-sterilized .vt-icon, .vt-item.step-sterilized .vt-line { background: #4f46e5; }
+.vt-item.step-packed .vt-icon, .vt-item.step-packed .vt-line { background: #9333ea; }
+.vt-item.step-delivered .vt-icon, .vt-item.step-delivered .vt-line { background: #059669; }
+.vt-item.pending .vt-icon {
+  background: white !important;
+  border: 2px solid currentColor;
+}
+.vt-item.step-submitted.pending .vt-icon { color: #f97316; }
+.vt-item.step-collected.pending .vt-icon { color: #2563eb; }
+.vt-item.step-cleaned.pending .vt-icon { color: #06b6d4; }
+.vt-item.step-sterilized.pending .vt-icon { color: #4f46e5; }
+.vt-item.step-packed.pending .vt-icon { color: #9333ea; }
+.vt-item.step-delivered.pending .vt-icon { color: #059669; }
 
-.vt-item.step-submitted.completed h5 { color: #3b82f6; }
-.vt-item.step-collected.completed h5 { color: #8b5cf6; }
-.vt-item.step-cleaned.completed h5 { color: #06b6d4; }
-.vt-item.step-sterilized.completed h5 { color: #f59e0b; }
-.vt-item.step-packed.completed h5 { color: #10b981; }
-.vt-item.step-delivered.completed h5 { color: #059669; }
+.vt-item.step-submitted h5 { color: #f97316; }
+.vt-item.step-collected h5 { color: #2563eb; }
+.vt-item.step-cleaned h5 { color: #06b6d4; }
+.vt-item.step-sterilized h5 { color: #4f46e5; }
+.vt-item.step-packed h5 { color: #9333ea; }
+.vt-item.step-delivered h5 { color: #059669; }
 .vt-item.pending-last { padding-bottom: 0; }
 .pending-node { border: 2px solid #ccc; background: transparent !important; }
 
@@ -128,6 +138,8 @@
 .node-circle { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #aaa; transition: all 0.3s; }
 .ht-line { height: 3px; background: #ddd; flex: 2; margin: 0 -20px; z-index: 1; margin-top: -25px; transition: all 0.3s; }
 /* Dynamic Step Colors (Horizontal Timeline) */
+.ht-node.step-requested .node-circle { background: #f97316; border-color: #fed7aa; color: white; }
+.ht-line.step-requested.completed { background: #f97316; }
 .ht-node.step-collected.completed .node-circle { background: #8b5cf6; border-color: #8b5cf6; color: white; }
 .ht-line.step-collected.completed { background: #8b5cf6; }
 .ht-node.step-cleaned.completed .node-circle { background: #06b6d4; border-color: #06b6d4; color: white; }

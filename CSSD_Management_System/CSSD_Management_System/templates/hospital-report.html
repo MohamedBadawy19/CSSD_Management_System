@@ -81,7 +81,7 @@
                     -
                   {% endfor %}
                 </td>
-                <td style="padding:10px 16px;">{{ req.status }}</td>
+                <td style="padding:10px 16px;"><span class="pill status-{{ req.status }}">{{ req.status }}</span></td>
                 <td style="padding:10px 16px;color:#64748b;">{{ req.submitted_at|date:'H:i' }}</td>
               </tr>
               {% empty %}
@@ -109,7 +109,7 @@
               <tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px 16px;color:#64748b;">{{ row.happened_at|date:'H:i' }}</td>
                 <td style="padding:10px 16px;font-weight:600;color:#2563eb;">REQ-{{ row.request.id|stringformat:"04d" }}</td>
-                <td style="padding:10px 16px;"><span class="pill pill-normal">{{ row.action }}</span></td>
+                <td style="padding:10px 16px;"><span class="pill status-{{ row.action }}">{{ row.action }}</span></td>
                 <td style="padding:10px 16px;">{% if row.operator %}{{ row.operator.email }}{% else %}-{% endif %}</td>
                 <td style="padding:10px 16px;">{{ row.request.department }}</td>
                 <td style="padding:10px 16px;">{% if row.request.batch %}Batch #{{ row.request.batch.id }}{% else %}-{% endif %}</td>
@@ -141,7 +141,9 @@
                 <td style="padding:10px 16px;">{{ b.operator.email }}</td>
                 <td style="padding:10px 16px;">{{ b.temperature }} C</td>
                 <td style="padding:10px 16px;">{{ b.cycle_duration }} min</td>
-                <td style="padding:10px 16px;"><span class="pill pill-normal">{{ b.status }}</span></td>
+                <td style="padding:10px 16px;">
+                  <span class="pill {% if b.status == 'Completed' %}pill-outline-completed{% else %}pill-outline-in-progress{% endif %}">{{ b.status }}</span>
+                </td>
                 <td style="padding:10px 16px;color:#64748b;">{{ b.created_at|date:'H:i' }}</td>
               </tr>
               {% empty %}
