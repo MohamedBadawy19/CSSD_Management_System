@@ -26,9 +26,9 @@
         <form method="GET" style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
           <div class="search-input-wrapper expand">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" name="q" value="{{ query }}" class="search-input" placeholder="Search by REQ ID or instrument name...">
+            <input type="text" name="q" value="{{ query }}" class="search-input" placeholder="Search by REQ ID (e.g. REQ-0001) or instrument name..." id="auditSearchInput">
           </div>
-          <button type="submit" class="btn-primary" style="padding:8px 20px;">Search</button>
+          <button type="submit" class="btn-primary" style="padding:8px 20px;" id="auditSearchBtn">Search</button>
         </form>
 
         {% if query %}
@@ -39,7 +39,10 @@
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;gap:1rem;">
             <div>
               <h4 style="font-size:1rem;font-weight:700;">REQ-{{ req.id|stringformat:"04d" }}</h4>
-              <p style="font-size:.8rem;color:#64748b;">{{ req.requester.email }} - {{ req.department }}</p>
+              <p style="font-size:.8rem;color:#64748b;">{{ req.requester.email }} &mdash; {{ req.department }}</p>
+              {% for item in req.items.all %}
+              <span style="display:inline-block;font-size:.72rem;background:#f1f5f9;color:#475569;border-radius:4px;padding:2px 8px;margin-top:4px;margin-right:4px;">{{ item.inventory_item.name }} &times;{{ item.quantity }}</span>
+              {% endfor %}
             </div>
             <div style="display:flex;gap:.5rem;">
               <span class="pill pill-outline-{{ req.status|lower }}">{{ req.status }}</span>
@@ -47,14 +50,15 @@
             </div>
           </div>
 
+          <!-- Full lifecycle audit trail — read-only -->
           <div style="font-size:.8rem;border-top:1px solid #f1f5f9;padding-top:.75rem;">
             <p style="font-weight:600;color:#374151;margin-bottom:.5rem;">Lifecycle Timeline</p>
-            {% if req.submitted_at %}<div style="padding:.3rem 0;color:#374151;"><strong>Submitted</strong> - {{ req.submitted_at|date:'Y-m-d H:i' }} by {{ req.requester.email }}</div>{% endif %}
-            {% if req.collected_at %}<div style="padding:.3rem 0;color:#374151;"><strong>Collected</strong> - {{ req.collected_at|date:'Y-m-d H:i' }}</div>{% endif %}
-            {% if req.cleaned_at %}<div style="padding:.3rem 0;color:#374151;"><strong>Cleaned</strong> - {{ req.cleaned_at|date:'Y-m-d H:i' }}</div>{% endif %}
-            {% if req.sterilized_at %}<div style="padding:.3rem 0;color:#374151;"><strong>Sterilized</strong> - {{ req.sterilized_at|date:'Y-m-d H:i' }}{% if req.batch %} (Batch #{{ req.batch.id }}, operator: {{ req.batch.operator.email }}){% endif %}</div>{% endif %}
-            {% if req.packed_at %}<div style="padding:.3rem 0;color:#374151;"><strong>Packed</strong> - {{ req.packed_at|date:'Y-m-d H:i' }}</div>{% endif %}
-            {% if req.delivered_at %}<div style="padding:.3rem 0;color:#16a34a;"><strong>Delivered</strong> - {{ req.delivered_at|date:'Y-m-d H:i' }}</div>{% endif %}
+            {% if req.submitted_at %}<div style="padding:.3rem 0;color:#374151;">✔ <strong>Submitted</strong> &mdash; {{ req.submitted_at|date:'Y-m-d H:i' }} by {{ req.requester.email }}</div>{% endif %}
+            {% if req.collected_at %}<div style="padding:.3rem 0;color:#374151;">✔ <strong>Collected</strong> &mdash; {{ req.collected_at|date:'Y-m-d H:i' }}{% if req.last_operator %} by {{ req.last_operator.email }}{% endif %}</div>{% endif %}
+            {% if req.cleaned_at %}<div style="padding:.3rem 0;color:#374151;">✔ <strong>Cleaned</strong> &mdash; {{ req.cleaned_at|date:'Y-m-d H:i' }}{% if req.last_operator %} by {{ req.last_operator.email }}{% endif %}</div>{% endif %}
+            {% if req.sterilized_at %}<div style="padding:.3rem 0;color:#374151;">✔ <strong>Sterilized</strong> &mdash; {{ req.sterilized_at|date:'Y-m-d H:i' }}{% if req.batch %} (Batch #{{ req.batch.id }}, operator: {{ req.batch.operator.email }}){% endif %}</div>{% endif %}
+            {% if req.packed_at %}<div style="padding:.3rem 0;color:#374151;">✔ <strong>Packed</strong> &mdash; {{ req.packed_at|date:'Y-m-d H:i' }}{% if req.last_operator %} by {{ req.last_operator.email }}{% endif %}</div>{% endif %}
+            {% if req.delivered_at %}<div style="padding:.3rem 0;color:#16a34a;">✔ <strong>Delivered</strong> &mdash; {{ req.delivered_at|date:'Y-m-d H:i' }}</div>{% endif %}
           </div>
 
           <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:.5rem .75rem;font-size:.75rem;color:#92400e;margin-top:.75rem;display:flex;gap:.4rem;">
@@ -74,6 +78,7 @@
           <p>Enter a request ID or instrument name to search the audit history.</p>
         </div>
         {% endif %}
+
       </div>
     </main>
   </div>

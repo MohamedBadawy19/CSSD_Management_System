@@ -51,8 +51,9 @@ urlpatterns = [
     path('dashboard/cssd/batches/', views.cssd_batch_list, name='cssd_batch_list'),
     path('dashboard/cssd/batches/create/', views.cssd_batch_create, name='cssd_batch_create'),
     path('dashboard/cssd/batches/<int:pk>/', views.cssd_batch_detail, name='cssd_batch_detail'),
+    # PROJ-31: Hospital Admin Report & Audit History
+    path('dashboard/hospital/', views.hospital_report, name='hospital_report'),
+    path('dashboard/hospital/audit/', views.hospital_audit, name='hospital_audit'),
+    # Nurse notifications
     path('dashboard/nurse/notifications/mark-read/', views.nurse_mark_notifications_read, name='nurse_mark_notifications_read'),
-    # Hospital Report
-    path('dashboard/admin/report/', views.hospital_report, name='hospital_report'),
-    path('dashboard/admin/audit/', views.hospital_audit, name='hospital_audit'),
 ]

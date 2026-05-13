@@ -74,7 +74,10 @@ def dashboard_router(request):
     """
     role = request.user.role
 
-    if role in ['CSSD Technician', 'System Administrator', 'Hospital Administrator']:
+    if role == 'Hospital Administrator':
+        return redirect('hospital_report')
+
+    if role in ['CSSD Technician', 'System Administrator']:
         filter_status = request.GET.get('filter', '')
 
         all_requests = InstrumentRequest.objects.prefetch_related(
@@ -455,14 +458,16 @@ def hospital_report(request):
         Q(created_at__date=report_date) | Q(requests__sterilized_at__date=report_date),
     ).distinct()
 
-    operators = CustomUser.objects.filter(
+    batch_operators = batches.values_list('operator__email', flat=True)
+    request_operators = CustomUser.objects.filter(
         Q(processed_requests__collected_at__date=report_date)
         | Q(processed_requests__cleaned_at__date=report_date)
         | Q(processed_requests__sterilized_at__date=report_date)
         | Q(processed_requests__packed_at__date=report_date)
         | Q(processed_requests__delivered_at__date=report_date),
         role='CSSD Technician',
-    ).distinct()
+    ).values_list('email', flat=True)
+    operators = list(set(list(batch_operators) + list(request_operators)))
 
     total_items = (
         RequestItem.objects
@@ -491,22 +496,27 @@ def hospital_report(request):
 @login_required
 @hospital_admin_required
 def hospital_audit(request):
+    """
+    US-31 / PROJ-31: Search Instrument Audit History.
+    """
     query = request.GET.get('q', '').strip()
-    results = InstrumentRequest.objects.none()
+    results = []
 
     if query:
-        filters = Q(items__inventory_item__name__icontains=query)
-        if query.upper().startswith('REQ-'):
-            query_id = query[4:]
-        else:
-            query_id = query
-        if query_id.isdigit():
-            filters |= Q(id=int(query_id))
+        import re
+        id_match = re.search(r'(\d+)', query)
+        numeric_id = int(id_match.group(1)) if id_match else None
+
+        filters = Q()
+        if numeric_id is not None:
+            filters |= Q(pk=numeric_id)
+
+        filters |= Q(items__inventory_item__name__icontains=query)
 
         results = (
             InstrumentRequest.objects
             .filter(filters)
-            .select_related('requester', 'batch', 'batch__operator')
+            .select_related('requester', 'batch', 'batch__operator', 'last_operator')
             .prefetch_related('items__inventory_item')
             .distinct()
             .order_by('-submitted_at')
@@ -925,3 +935,6 @@ def cssd_inventory_alerts(request):
         'categories': categories,
         'selected_category': category_filter,
     })
+
+
+
