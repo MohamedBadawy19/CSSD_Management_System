@@ -449,10 +449,11 @@ def cssd_batch_list(request):
 @login_required
 @cssd_staff_required
 def cssd_batch_create(request):
-    """Supporting view: create a sterilization batch to use with this feature."""
     """
-    US-24: Creates a new sterilization batch and assigns the current user as operator.
-    The logged-in CSSD technician is automatically set as the batch operator.
+    US-12 — Create Sterilization Batch.
+    AC-1: CSSD Tech creates a batch and adds multiple instrument sets.
+    AC-2: Batch status defaults to 'In Progress'.
+    The logged-in user is auto-assigned as the operator.
     """
     if request.method == 'POST':
         form = SterilizationBatchForm(request.POST)
@@ -460,8 +461,13 @@ def cssd_batch_create(request):
             batch = form.save(commit=False)
             batch.operator = request.user
             batch.save()
-            messages.success(request, f'Batch #{batch.id} created.')
-            return redirect('cssd_dashboard')
+            # Save M2M after the instance has a PK (AC-1)
+            form.save_m2m()
+            messages.success(
+                request,
+                f'Batch #{batch.id} created with status "{batch.status}".'
+            )
+            return redirect('cssd_batch_detail', pk=batch.pk)
     else:
         form = SterilizationBatchForm()
     return render(request, 'cssd-batch-create.html', {'form': form})

@@ -102,12 +102,22 @@ class InstrumentSetForm(forms.ModelForm):
 class SterilizationBatchForm(forms.ModelForm):
     """
     US-12/13/14 — Create Sterilization Batch.
+    AC-1: Includes multiple instrument set selection.
+    AC-2: Status defaults to 'In Progress' (model default).
     Validates temperature ≥ 121°C and cycle_duration > 0.
     """
 
+    instrument_sets = forms.ModelMultipleChoiceField(
+        queryset=InstrumentSet.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Instrument Sets',
+        help_text='Select one or more instrument sets to include in this batch.',
+    )
+
     class Meta:
         model = SterilizationBatch
-        fields = ['temperature', 'cycle_duration']
+        fields = ['temperature', 'cycle_duration', 'instrument_sets']
         widgets = {
             'temperature': forms.NumberInput(attrs={
                 'class': 'form-input', 'placeholder': 'e.g. 134',
