@@ -74,6 +74,12 @@ class SterilizationBatch(models.Model):
     cycle_duration = models.FloatField()  # in minutes
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='In Progress')
     created_at = models.DateTimeField(auto_now_add=True)
+    # US-12: Multiple instrument sets per batch
+    instrument_sets = models.ManyToManyField(
+        'InstrumentSet',
+        blank=True,
+        related_name='batches',
+    )
 
     def __str__(self):
         return f"Batch {self.id} - {self.status} (op: {self.operator.email})"

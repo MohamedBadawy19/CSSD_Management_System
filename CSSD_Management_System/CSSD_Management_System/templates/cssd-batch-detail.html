@@ -1,21 +1,28 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Batch Detail - CSSD</title>
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="stylesheet" href="../css/extended_styles.css">
+  <title>Batch #{{ batch.id }} — CSSD</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="dashboard-wrapper theme-blue">
     <nav class="dashboard-nav theme-dark-blue">
       <div class="nav-brand">
-        <a href="cssd-batch-list.html" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
+        <a href="{% url 'cssd_batch_list' %}" class="btn-back-icon"><i data-lucide="arrow-left"></i></a>
         <div class="nav-title">
-          <h2 id="navTitle">Batch #—</h2>
-          <p id="navStatus">—</p>
+          <h2>Batch #{{ batch.id }}</h2>
+          <p>
+            {% if batch.status == 'In Progress' %}
+              <span style="color:#86efac;">● In Progress</span>
+            {% else %}
+              <span style="color:#94a3b8;">● {{ batch.status }}</span>
+            {% endif %}
+          </p>
         </div>
       </div>
     </nav>
@@ -23,62 +30,122 @@
     <main class="dashboard-main details-main">
       <div class="container-center">
 
+        {% if messages %}
+          {% for msg in messages %}
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;font-size:.875rem;">
+              ✓ {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <!-- Batch details -->
         <div class="detail-card summary-card">
           <h3>Batch Details</h3>
-          <div class="summary-grid" style="margin-top:1rem;" id="batchDetails"><!-- JS --></div>
+          <div class="summary-grid" style="margin-top:1rem;">
+
+            <div class="sg-item">
+              <i data-lucide="hash"></i>
+              <div><span class="sg-label">Batch ID</span><span class="sg-value">#{{ batch.id }}</span></div>
+            </div>
+
+            <div class="sg-item">
+              <i data-lucide="activity"></i>
+              <div>
+                <span class="sg-label">Status</span>
+                <span class="sg-value">
+                  {% if batch.status == 'In Progress' %}
+                    <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;padding:.2rem .65rem;border-radius:20px;font-size:.8rem;">In Progress</span>
+                  {% else %}
+                    <span style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;padding:.2rem .65rem;border-radius:20px;font-size:.8rem;">{{ batch.status }}</span>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+
+            <div class="sg-item">
+              <i data-lucide="user"></i>
+              <div><span class="sg-label">Operator</span><span class="sg-value">{{ batch.operator.email }}</span></div>
+            </div>
+
+            <div class="sg-item">
+              <i data-lucide="thermometer"></i>
+              <div><span class="sg-label">Temperature</span><span class="sg-value">{{ batch.temperature }}°C</span></div>
+            </div>
+
+            <div class="sg-item">
+              <i data-lucide="timer"></i>
+              <div><span class="sg-label">Cycle Duration</span><span class="sg-value">{{ batch.cycle_duration }} min</span></div>
+            </div>
+
+            <div class="sg-item">
+              <i data-lucide="calendar"></i>
+              <div><span class="sg-label">Created</span><span class="sg-value">{{ batch.created_at|date:"d M Y, H:i" }}</span></div>
+            </div>
+
+          </div>
           <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.75rem 1rem;font-size:.8rem;color:#92400e;display:flex;gap:.5rem;margin-top:1rem;">
             <i data-lucide="lock" style="width:16px;height:16px;flex-shrink:0;"></i>
             <span>Batch records are <strong>read-only</strong>. Temperature and duration cannot be edited after submission.</span>
           </div>
         </div>
 
-        <div class="detail-card list-card">
+        <!-- Linked instrument sets (US-12 AC-1) -->
+        <div class="detail-card list-card" style="margin-top:1.5rem;">
+          <div class="card-header pb-border" style="display:flex;justify-content:space-between;align-items:center;">
+            <h4>Instrument Sets in this Batch</h4>
+            <span style="font-size:.8rem;color:#64748b;">{{ batch.instrument_sets.count }} set(s)</span>
+          </div>
+          {% if batch.instrument_sets.exists %}
+            <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+              <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;text-align:left;">
+                  <th style="padding:.65rem 1rem;color:#64748b;font-size:.75rem;text-transform:uppercase;letter-spacing:.05rem;">Name</th>
+                  <th style="padding:.65rem 1rem;color:#64748b;font-size:.75rem;text-transform:uppercase;letter-spacing:.05rem;">Type</th>
+                  <th style="padding:.65rem 1rem;color:#64748b;font-size:.75rem;text-transform:uppercase;letter-spacing:.05rem;">Qty</th>
+                  <th style="padding:.65rem 1rem;color:#64748b;font-size:.75rem;text-transform:uppercase;letter-spacing:.05rem;">State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for iset in batch.instrument_sets.all %}
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:.65rem 1rem;font-weight:600;color:#1e293b;">{{ iset.name }}</td>
+                    <td style="padding:.65rem 1rem;color:#475569;">{{ iset.type }}</td>
+                    <td style="padding:.65rem 1rem;color:#475569;">{{ iset.quantity }}</td>
+                    <td style="padding:.65rem 1rem;">
+                      <span style="background:#f1f5f9;color:#475569;padding:.15rem .5rem;border-radius:12px;font-size:.75rem;">{{ iset.state }}</span>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p style="padding:1.25rem;color:#94a3b8;font-size:.875rem;">No instrument sets were linked to this batch.</p>
+          {% endif %}
+        </div>
+
+        <!-- Linked requests -->
+        <div class="detail-card list-card" style="margin-top:1.5rem;">
           <div class="card-header pb-border"><h4>Linked Requests</h4></div>
-          <div class="cssd-list" id="linkedRequests"><!-- JS --></div>
+          {% if linked_requests %}
+            <div class="cssd-list">
+              {% for req in linked_requests %}
+                <a href="{% url 'cssd_request_details' req.id %}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;padding:.75rem 1rem;border-bottom:1px solid #f1f5f9;">
+                  <div style="flex:1;">
+                    <div style="font-weight:600;color:#1e293b;">REQ-{{ req.id|stringformat:"04d" }}</div>
+                    <div style="font-size:.8rem;color:#64748b;">{{ req.requester.email }} — {{ req.department }}</div>
+                  </div>
+                  <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;padding:.2rem .65rem;border-radius:20px;font-size:.75rem;">{{ req.status }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p style="padding:1.25rem;color:#94a3b8;font-size:.875rem;">No requests linked to this batch yet.</p>
+          {% endif %}
         </div>
 
       </div>
     </main>
   </div>
-
-  <script src="../js/mock-data.js"></script>
-  <script src="../js/app.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const id    = parseInt(new URLSearchParams(location.search).get('id') || MOCK.batches[0].id);
-      const batch = MOCK.batches.find(b => b.id === id) || MOCK.batches[0];
-
-      document.getElementById('navTitle').textContent  = `Batch #${batch.id}`;
-      document.getElementById('navStatus').textContent = batch.status;
-
-      document.getElementById('batchDetails').innerHTML = `
-        <div class="sg-item"><i data-lucide="user"></i><div><span class="sg-label">Operator</span><span class="sg-value">${batch.operator}</span></div></div>
-        <div class="sg-item"><i data-lucide="flask-conical"></i><div><span class="sg-label">Method</span><span class="sg-value">${batch.method}</span></div></div>
-        <div class="sg-item"><i data-lucide="thermometer"></i><div><span class="sg-label">Temperature</span><span class="sg-value">${batch.temperature}°C</span></div></div>
-        <div class="sg-item"><i data-lucide="timer"></i><div><span class="sg-label">Cycle Duration</span><span class="sg-value">${batch.duration} minutes</span></div></div>
-        <div class="sg-item"><i data-lucide="activity"></i><div><span class="sg-label">Status</span><span class="sg-value">${batch.status}</span></div></div>
-        <div class="sg-item"><i data-lucide="calendar"></i><div><span class="sg-label">Created</span><span class="sg-value">${batch.created_at}</span></div></div>
-        ${batch.notes ? `<div class="sg-item"><i data-lucide="file-text"></i><div><span class="sg-label">Notes</span><span class="sg-value">${batch.notes}</span></div></div>` : ''}
-      `;
-
-      // Linked requests = requests that are Sterilized+ (mock link)
-      const linked = MOCK.requests.filter(r => ['Sterilized','Packed','Delivered'].includes(r.status)).slice(0, 3);
-      const linksEl = document.getElementById('linkedRequests');
-      linksEl.innerHTML = linked.length
-        ? linked.map(r => `
-          <a href="cssd-request-details.html?id=${r.id}" class="cssd-list-item" style="text-decoration:none;color:inherit;display:flex;">
-            <div class="item-main">
-              <div class="item-title"><span class="item-id">REQ-${String(r.id).padStart(4,'0')}</span></div>
-              <div class="item-subtitle">${r.requester}</div>
-            </div>
-            <div class="item-actions">
-              <span class="pill" style="background:#6366f120;color:#6366f1;border:1px solid #6366f140;border-radius:999px;padding:2px 10px;font-size:.78rem;">${r.status}</span>
-            </div>
-          </a>`).join('')
-        : '<p style="padding:1rem;color:#94a3b8;font-size:.875rem;">No requests linked to this batch yet.</p>';
-
-      lucide.createIcons();
-    });
-  </script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
