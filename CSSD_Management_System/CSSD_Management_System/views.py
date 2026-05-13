@@ -1,31 +1,24 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from datetime import datetime, timedelta
+
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from .forms import EmailLoginForm, SterilizationBatchForm
+from django.db import transaction
+from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed
-from django.views.decorators.csrf import csrf_exempt
-from .models import InstrumentSet, RequestItem, InstrumentRequest, InventoryItem, Notification, SterilizationBatch
-from .decorators import cssd_staff_required, hospital_admin_required
-from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+from .decorators import cssd_staff_required, hospital_admin_required
+from .forms import EmailLoginForm, SterilizationBatchForm
+from .models import (CustomUser, InstrumentRequest, InstrumentSet, InventoryItem,
+                     Notification, RequestItem, SterilizationBatch)
+
 # US-29: View Estimated Completion Time (ETA)
 # This branch isolates only the ETA display feature.
 # Nurses can view the estimated time remaining for their instrument request
 # to complete the sterilization pipeline based on its current status.
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import HttpResponse
-from django.utils import timezone
-from datetime import timedelta
-
-from .forms import EmailLoginForm
-from .decorators import cssd_staff_required
-from .models import InstrumentRequest, RequestItem, InventoryItem, Notification
-
-
 
 # US-27: View Inventory Shortage Alerts
 # CSSD staff can view items whose current stock is at or below the minimum threshold.
@@ -39,14 +32,24 @@ from .models import InstrumentRequest, RequestItem, InventoryItem, Notification
 
 
 def login_view(request):
-    role_type = request.GET.get('role', 'staff')
+    role_type = request.POST.get('portal_role') or request.GET.get('role')
     template_name = 'nurse-login.html' if role_type == 'nurse' else 'staff-login.html'
     if request.method == 'POST':
         form = EmailLoginForm(request, data=request.POST)
         
         if form.is_valid():
-            login(request, form.get_user())
-            return redirect('dashboard_router')
+            user = form.get_user()
+            staff_roles = {'CSSD Technician', 'System Administrator', 'Hospital Administrator'}
+            if role_type == 'nurse' and user.role != 'Department Nurse':
+                form.add_error(None, "This account is not allowed to use this portal.")
+                return render(request, template_name, {'form': form})
+            if role_type == 'staff' and user.role not in staff_roles:
+                form.add_error(None, "This account is not allowed to use this portal.")
+                return render(request, template_name, {'form': form})
+            login(request, user)
+            if user.role == 'Department Nurse':
+                return redirect('nurse_dashboard')
+            return redirect('cssd_dashboard')
     else:
         form = EmailLoginForm()
     return render(request, template_name, {'form': form})
@@ -60,7 +63,7 @@ def home(request):
 
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('home')
 
 
 @login_required
@@ -115,7 +118,7 @@ def dashboard_router(request):
         return render(request, 'cssd-dashboard.html', context)
 
     elif role == 'Department Nurse':
-        return redirect('nurse_dashboard')
+        return nurse_dashboard(request)
     return HttpResponse(f"Role '{role}' not recognized.", status=403)
 
 
@@ -135,6 +138,7 @@ def nurse_dashboard(request):
             'status': request_obj.status,
             'department': request_obj.department,
             'notes': request_obj.notes,
+            'created_at': request_obj.submitted_at,
         }
         final_requests.append(request_dict)
 
@@ -180,47 +184,86 @@ def get_instruments():
 
 @login_required
 def nurse_create_request(request):
+    if request.method == 'POST':
+        return save_instrument_request(request)
     return render(request, 'nurse-create-request.html', {'instruments': get_instruments()})
 
 
 @csrf_exempt
+@login_required
 def save_instrument_request(request):
+    if request.user.role != 'Department Nurse':
+        return HttpResponseForbidden("Only department nurses can submit instrument requests.")
+
     if request.method == 'POST':
         instruments = request.POST.getlist('instruments')
-        if len(instruments) < 1:
-            messages.warning(request , "You must enter Quanitiy or select instrument !")
-            return redirect('nurse_create_request')
         priority = request.POST.get('priority')
-        notes = request.POST.get('notes')
+        notes = request.POST.get('notes') or ''
 
-        new_request = InstrumentRequest.objects.create(
-            requester=request.user,
-            priority=priority,
-            department=request.user.department,
-            notes=notes,
-        )
+        requested_items = []
+        selected_instruments = []
+        if instruments:
+            for instrument in instruments:
+                selected_instruments.append((
+                    instrument,
+                    InventoryItem.objects.get(name=instrument),
+                    request.POST.get("quantity_" + instrument, "0"),
+                ))
+        else:
+            for key, value in request.POST.items():
+                if not key.startswith("quantity_"):
+                    continue
+                item_id = key.removeprefix("quantity_")
+                if not item_id.isdigit():
+                    continue
+                try:
+                    database_instrument = InventoryItem.objects.get(pk=int(item_id))
+                except InventoryItem.DoesNotExist:
+                    continue
+                selected_instruments.append((database_instrument.name, database_instrument, value))
 
-        for instrument in instruments:
-            quantity = int(request.POST.get("quantity_" + instrument))
-            database_instrument = InventoryItem.objects.get(name=instrument)
+        if not selected_instruments:
+            messages.warning(request, "Select at least one instrument.")
+            return redirect('nurse_create_request')
+
+        for instrument, database_instrument, raw_quantity in selected_instruments:
+            try:
+                quantity = int(raw_quantity)
+            except (TypeError, ValueError):
+                quantity = 0
+
+            if quantity <= 0:
+                messages.warning(request, "Select at least one instrument with a quantity greater than zero.")
+                return redirect('nurse_create_request')
 
             if quantity > database_instrument.current_stock:
-                return render(
+                messages.warning(
                     request,
-                    'nurse-create-request.html',
-                    {
-                        'instruments': get_instruments(),
-                        'warning': f'instrument {instrument} has current_stock : {database_instrument.current_stock}',
-                    },
+                    f"Insufficient stock for {instrument}. Available: {database_instrument.current_stock}.",
                 )
+                return redirect('nurse_create_request')
 
-            RequestItem.objects.create(
-                request=new_request,
-                inventory_item=database_instrument,
-                quantity=quantity,
+            requested_items.append((database_instrument, quantity))
+
+        with transaction.atomic():
+            new_request = InstrumentRequest.objects.create(
+                requester=request.user,
+                priority=priority,
+                department=request.user.department,
+                notes=notes,
             )
-            database_instrument.current_stock -= quantity
-            database_instrument.save()
+
+            for database_instrument, quantity in requested_items:
+                RequestItem.objects.create(
+                    request=new_request,
+                    inventory_item=database_instrument,
+                    quantity=quantity,
+                )
+                database_instrument.current_stock -= quantity
+                database_instrument.save()
+
+        messages.success(request, f"Request REQ-{new_request.id:04d} sent successfully.")
+        return redirect('nurse_dashboard')
     return redirect('nurse_create_request')
 
 
@@ -280,6 +323,10 @@ def cssd_update_request_status(request, pk, status):
 
     if status not in valid_transitions:
         messages.error(request, f"Invalid transition status: '{status}'.")
+        return redirect('cssd_request_detail', pk=pk)
+
+    if req.status == 'Collected' and status != 'Cleaned':
+        messages.error(request, "Can only mark as Cleaned from Collected.")
         return redirect('cssd_request_detail', pk=pk)
 
     if req.status != valid_transitions[status]:
@@ -350,8 +397,135 @@ def cssd_batch_create(request):
     return render(request, 'cssd-batch-create.html', {'form': form})
 
 
+@login_required
+@hospital_admin_required
+def hospital_report(request):
+    date_str = request.GET.get('date', timezone.localdate().isoformat())
+    try:
+        report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        report_date = timezone.localdate()
+        date_str = report_date.isoformat()
+
+    nurse_requests = InstrumentRequest.objects.filter(
+        submitted_at__date=report_date,
+    ).select_related('requester').prefetch_related(
+        'items__inventory_item'
+    ).order_by('-submitted_at')
+
+    technician_filters = (
+        Q(collected_at__date=report_date)
+        | Q(cleaned_at__date=report_date)
+        | Q(sterilized_at__date=report_date)
+        | Q(packed_at__date=report_date)
+        | Q(delivered_at__date=report_date)
+    )
+    processed_requests = InstrumentRequest.objects.filter(
+        technician_filters
+    ).select_related('requester', 'batch', 'batch__operator', 'last_operator').prefetch_related(
+        'items__inventory_item'
+    ).distinct()
+
+    def happened_on_report_day(value):
+        return value and timezone.localtime(value).date() == report_date
+
+    technician_actions = []
+    for req in processed_requests:
+        action_rows = [
+            ('Collected', req.collected_at),
+            ('Cleaned', req.cleaned_at),
+            ('Sterilized', req.sterilized_at),
+            ('Packed', req.packed_at),
+            ('Delivered', req.delivered_at),
+        ]
+        for action, happened_at in action_rows:
+            if happened_on_report_day(happened_at):
+                technician_actions.append({
+                    'request': req,
+                    'action': action,
+                    'happened_at': happened_at,
+                    'operator': req.last_operator or (req.batch.operator if req.batch else None),
+                })
+    technician_actions.sort(key=lambda row: row['happened_at'], reverse=True)
+
+    requests = InstrumentRequest.objects.filter(
+        sterilized_at__date=report_date,
+    ).select_related('requester', 'batch', 'batch__operator', 'last_operator').prefetch_related(
+        'items__inventory_item'
+    )
+
+    batches = SterilizationBatch.objects.filter(
+        Q(created_at__date=report_date) | Q(requests__sterilized_at__date=report_date),
+    ).distinct()
+
+    batch_operators = batches.values_list('operator__email', flat=True)
+    request_operators = CustomUser.objects.filter(
+        Q(processed_requests__collected_at__date=report_date)
+        | Q(processed_requests__cleaned_at__date=report_date)
+        | Q(processed_requests__sterilized_at__date=report_date)
+        | Q(processed_requests__packed_at__date=report_date)
+        | Q(processed_requests__delivered_at__date=report_date),
+        role='CSSD Technician',
+    ).values_list('email', flat=True)
+    operators = list(set(list(batch_operators) + list(request_operators)))
+
+    total_items = (
+        RequestItem.objects
+        .filter(request__in=requests)
+        .aggregate(total=Sum('quantity'))['total']
+        or 0
+    )
+
+    context = {
+        'date_str': date_str,
+        'report_date': report_date.strftime('%d %b %Y'),
+        'nurse_requests': nurse_requests,
+        'technician_actions': technician_actions,
+        'requests': requests,
+        'batches': batches,
+        'total_batches': batches.count(),
+        'total_sterilized': total_items,
+        'total_requests': requests.count(),
+        'total_submitted': nurse_requests.count(),
+        'total_tech_actions': len(technician_actions),
+        'operators': operators,
+    }
+    return render(request, 'hospital-report.html', context)
 
 
+@login_required
+@hospital_admin_required
+def hospital_audit(request):
+    """
+    US-31 / PROJ-31: Search Instrument Audit History.
+    """
+    query = request.GET.get('q', '').strip()
+    results = []
+
+    if query:
+        import re
+        id_match = re.search(r'(\d+)', query)
+        numeric_id = int(id_match.group(1)) if id_match else None
+
+        filters = Q()
+        if numeric_id is not None:
+            filters |= Q(pk=numeric_id)
+
+        filters |= Q(items__inventory_item__name__icontains=query)
+
+        results = (
+            InstrumentRequest.objects
+            .filter(filters)
+            .select_related('requester', 'batch', 'batch__operator', 'last_operator')
+            .prefetch_related('items__inventory_item')
+            .distinct()
+            .order_by('-submitted_at')
+        )
+
+    return render(request, 'hospital-audit.html', {
+        'query': query,
+        'results': results,
+    })
 
 
 @login_required
@@ -368,6 +542,9 @@ def mark_delivered(request, request_id):
             'eta':   instrument_request.get_eta(),
             'error': error,
         }
+
+    if request.user.role != 'Department Nurse':
+        return HttpResponseForbidden("Only department nurses can confirm delivery.")
 
     if request.user.department != instrument_request.department:
         return render(
@@ -403,6 +580,13 @@ def mark_delivered(request, request_id):
     return redirect('nurse_request_details', request_id=request_id)
 
 
+@login_required
+def nurse_request_detail_compat(request, pk):
+    if request.method == 'POST' and request.POST.get('action') == 'deliver':
+        return mark_delivered(request, pk)
+    return nurse_request_details(request, pk)
+
+
 def _detail_context(instrument_request, error=None):
     return {
         'req':     instrument_request,
@@ -416,6 +600,7 @@ def _detail_context(instrument_request, error=None):
 # US-07  Mark as Collected   (Requested → Collected)
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required
+@cssd_staff_required
 def mark_collected(request, request_id):
     """
     US-07 — Mark Instrument as Collected.
@@ -460,6 +645,7 @@ def mark_collected(request, request_id):
 # US-08  Mark as Cleaned     (Collected → Cleaned)
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required
+@cssd_staff_required
 def mark_cleaned(request, request_id):
     """
     US-08 — Mark Instrument as Cleaned.
@@ -498,6 +684,7 @@ def mark_cleaned(request, request_id):
 # US-09  Mark as Sterilized  (Cleaned → Sterilized)  [batch optional]
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required
+@cssd_staff_required
 def mark_sterilized(request, request_id):
     """
     US-09 — Mark Instrument as Sterilized.
@@ -540,6 +727,7 @@ def mark_sterilized(request, request_id):
 # US-10  Mark as Packed      (Sterilized → Packed)
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required
+@cssd_staff_required
 def mark_packed(request, request_id):
     """
     US-10 — Mark Instrument as Packed.
@@ -577,6 +765,7 @@ def mark_packed(request, request_id):
 # CSSD Request Details page — Django-rendered (supports US-07 to US-10)
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required
+@cssd_staff_required
 def cssd_request_details(request, request_id):
     """
     Renders the CSSD request-details page with live database data.
@@ -748,95 +937,4 @@ def cssd_inventory_alerts(request):
     })
 
 
-# ---------------------------------------------------------------------------
-# US-31: Search Instrument Audit History  ← FEATURE (PROJ-31)
-# ---------------------------------------------------------------------------
 
-@login_required
-@hospital_admin_required
-def hospital_report(request):
-    """
-    Hospital Admin daily sterilization report dashboard.
-    Shows batch statistics for a selected date, with a link to the audit page.
-    """
-    from datetime import date, datetime
-
-    date_str = request.GET.get('date', '')
-    try:
-        report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        report_date = date.today()
-        date_str = report_date.strftime('%Y-%m-%d')
-
-    batches = SterilizationBatch.objects.filter(
-        created_at__date=report_date
-    ).select_related('operator').order_by('-created_at')
-
-    # Count requests that were sterilized on this date
-    total_sterilized = InstrumentRequest.objects.filter(
-        sterilized_at__date=report_date
-    ).count()
-
-    # Distinct operators active on this date
-    operators = batches.values_list('operator__email', flat=True).distinct()
-
-    return render(request, 'hospital-report.html', {
-        'batches': batches,
-        'total_batches': batches.count(),
-        'total_sterilized': total_sterilized,
-        'operators': list(operators),
-        'report_date': report_date,
-        'date_str': date_str,
-    })
-
-
-@login_required
-@hospital_admin_required
-def hospital_audit(request):
-    """
-    US-31 / PROJ-31: Search Instrument Audit History.
-
-    Acceptance criteria:
-    • Given I am logged in as a Hospital Admin, When I search by instrument
-      set ID or name, Then the system returns the full lifecycle timeline with
-      every state change, timestamp, and operator name.
-    • Given I am viewing an instrument's audit history, When I try to edit
-      any entry, Then the system blocks editing and all results remain read-only.
-
-    Search supports:
-    - Request ID: "REQ-0001", "0001", or just "1"
-    - Instrument name: partial match against InventoryItem names in RequestItems
-    """
-    query = request.GET.get('q', '').strip()
-    results = []
-
-    if query:
-        from django.db.models import Q
-        import re
-
-        # Try to extract a numeric ID from patterns like "REQ-0001", "0001", or "1"
-        id_match = re.search(r'(\d+)', query)
-        numeric_id = int(id_match.group(1)) if id_match else None
-
-        # Build query: match by request ID OR by instrument name in request items
-        filters = Q()
-
-        if numeric_id is not None:
-            filters |= Q(pk=numeric_id)
-
-        # Search by instrument name (via RequestItem → InventoryItem)
-        filters |= Q(items__inventory_item__name__icontains=query)
-
-        results = (
-            InstrumentRequest.objects
-            .filter(filters)
-            .select_related('requester', 'last_operator', 'batch__operator')
-            .prefetch_related('items__inventory_item')
-            .distinct()
-            .order_by('-submitted_at')
-        )
-
-    return render(request, 'hospital-audit.html', {
-        'query': query,
-        'results': results,
-    })

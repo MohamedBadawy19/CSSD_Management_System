@@ -345,10 +345,10 @@ class TestDashboardRoutingIntegration:
 
     @pytest.mark.integration
     def test_nurse_still_redirected_to_nurse_dashboard(self, nurse_client):
-        """Nurse → still redirected to nurse dashboard (no regression)."""
+        """Nurse → still renders nurse dashboard (no regression)."""
         resp = nurse_client.get(reverse("dashboard_router"))
-        # Nurse gets a 302 redirect to nurse_dashboard
-        assert resp.status_code == 302
+        # Nurse gets the nurse dashboard directly rendered
+        assert resp.status_code == 200
 
     @pytest.mark.integration
     def test_sys_admin_still_gets_cssd_dashboard(self, admin_client):

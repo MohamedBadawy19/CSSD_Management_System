@@ -83,11 +83,6 @@ class InventoryItem(models.Model):
     category = models.CharField(max_length=100)
     current_stock = models.IntegerField(default=0)
     min_threshold = models.IntegerField(default=10)
-    status = models.CharField(
-        max_length=20, 
-        default='Unassigned',
-        choices=[('Unassigned', 'Unassigned'), ('Assigned', 'Assigned')]
-    )
 
     @property
     def status(self):

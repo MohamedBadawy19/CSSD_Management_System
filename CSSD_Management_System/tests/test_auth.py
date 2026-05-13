@@ -102,7 +102,7 @@ def test_login_with_valid_cssd_credentials(client, cssd_technician_user):
     US-01: Valid credentials -> redirect to dashboard router.
     """
     # ARRANGE: Set up the URL and login payload
-    url = reverse("login")
+    url = reverse("login") + "?role=staff"
     payload = {
         "username": cssd_technician_user.email,
         "password": "TestPass123!"  # Password defined in conftest.py
@@ -111,9 +111,9 @@ def test_login_with_valid_cssd_credentials(client, cssd_technician_user):
     # ACT: Submit the POST request to the login endpoint
     response = client.post(url, data=payload)
 
-    # ASSERT: It should redirect (HTTP 302) to the dashboard router
+    # ASSERT: It should redirect (HTTP 302) to the CSSD dashboard
     assert response.status_code == 302
-    assert response.url == reverse("dashboard_router")
+    assert response.url == reverse("cssd_dashboard")
 
 
 def test_login_with_invalid_credentials(client, cssd_technician_user):
@@ -122,7 +122,7 @@ def test_login_with_invalid_credentials(client, cssd_technician_user):
     US-01: Invalid credentials -> error message and access denied.
     """
     # ARRANGE: Setup payload with the WRONG password
-    url = reverse("login")
+    url = reverse("login") + "?role=nurse"
     payload = {
         "username": cssd_technician_user.email,
         "password": "WrongPassword!"
@@ -153,9 +153,22 @@ def test_login_with_valid_nurse_credentials(client, nurse_user):
     # ACT: Submit the POST request
     response = client.post(url, data=payload)
 
-    # ASSERT: Should successfully redirect to the dashboard router
+    # ASSERT: Should successfully redirect to the nurse dashboard
     assert response.status_code == 302
-    assert response.url == reverse("dashboard_router")
+    assert response.url == reverse("nurse_dashboard")
+
+
+def test_logout_redirects_to_home(client, cssd_technician_user):
+    """
+    Integration Test: GET /logout/ clears the session and returns to home.
+    """
+    client.login(email=cssd_technician_user.email, password="TestPass123!")
+
+    response = client.get(reverse("logout"))
+
+    assert response.status_code == 302
+    assert response.url == reverse("home")
+    assert "_auth_user_id" not in client.session
 
 
 def test_nurse_cannot_access_cssd_endpoints(nurse_user):

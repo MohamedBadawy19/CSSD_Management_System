@@ -109,14 +109,36 @@ def test_submit_instrument_request_integration(nurse_client, sample_inventory_it
     # ACT: Submit the request
     response = nurse_client.post(url, data=payload)
     
-    # ASSERT: Should successfully redirect back to the creation page or dashboard (HTTP 302)
+    # ASSERT: Should successfully redirect back to the nurse dashboard (HTTP 302)
     assert response.status_code == 302
+    assert response.url == reverse("nurse_dashboard")
     
     # ASSERT: The request must now exist in the database with status "Requested" (CSSD Dashboard Pending List)
     new_request = InstrumentRequest.objects.latest('id')
     assert new_request.priority == "Urgent"
     assert new_request.status == "Requested"
     assert new_request.items.count() == 1
+
+
+def test_submit_instrument_request_shows_success_message(nurse_client, sample_inventory_items):
+    """
+    Integration Test: successful request submission displays a dashboard success message.
+    """
+    scalpel = sample_inventory_items["available"]
+    payload = {
+        "priority": "Normal",
+        "notes": "Routine request",
+        "instruments": [scalpel.name],
+        f"quantity_{scalpel.name}": "1",
+    }
+
+    response = nurse_client.post(reverse("save_instrument_request"), data=payload, follow=True)
+    new_request = InstrumentRequest.objects.latest("id")
+
+    assert response.status_code == 200
+    assert response.redirect_chain[-1][0] == reverse("nurse_dashboard")
+    assert f"Request REQ-{new_request.id:04d} sent successfully.".encode() in response.content
+    assert f"REQ-{new_request.id:04d}".encode() in response.content
 
 
 def test_view_available_sterile_stock(nurse_client, sample_instrument_sets):

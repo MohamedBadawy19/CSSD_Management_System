@@ -1,9 +1,10 @@
-﻿﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Report</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Sterilization Report</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
   <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -15,6 +16,7 @@
         <div class="nav-title"><h2>Daily Sterilization Report</h2><p>Hospital Administration</p></div>
       </div>
       <div class="nav-actions">
+        <a href="{% url 'admin:index' %}" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">Admin</a>
         <a href="{% url 'hospital_audit' %}" class="btn-outline" style="font-size:.8rem;padding:6px 12px;text-decoration:none;">Audit History</a>
         <a href="{% url 'logout' %}" class="btn-logout icon-only"><i data-lucide="log-out"></i></a>
       </div>
@@ -22,15 +24,10 @@
 
     <main class="dashboard-main">
       <div class="dashboard-container">
-
-        <!-- Date picker -->
-        <form method="GET" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+        <form method="GET" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
           <label style="font-size:.8rem;font-weight:600;color:#64748b;">Select Date:</label>
           <input type="date" name="date" value="{{ date_str }}" class="form-input" style="width:auto;padding:6px 10px;">
           <button type="submit" class="btn-primary" style="padding:7px 16px;font-size:.85rem;">View Report</button>
-          <a href="?date={{ date_str }}&export=pdf" class="btn-outline" style="padding:7px 16px;font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:.4rem;">
-            <i data-lucide="download" style="width:14px;height:14px;"></i> Export PDF
-          </a>
         </form>
 
         <div class="cssd-stats-grid">
@@ -40,19 +37,92 @@
             <p class="stat-desc">Processed on {{ report_date }}</p>
           </div>
           <div class="stat-card">
-            <div class="stat-header"><span class="stat-label">Instruments Sterilized</span><i data-lucide="check-circle-2" class="stat-icon-small green"></i></div>
+            <div class="stat-header"><span class="stat-label">Sterilized Items</span><i data-lucide="check-circle-2" class="stat-icon-small green"></i></div>
             <h3 class="stat-value">{{ total_sterilized }}</h3>
-            <p class="stat-desc">Requests completed</p>
+            <p class="stat-desc">Total instruments by quantity</p>
           </div>
           <div class="stat-card">
-            <div class="stat-header"><span class="stat-label">Operators Active</span><i data-lucide="users" class="stat-icon-small orange"></i></div>
-            <h3 class="stat-value">{{ operators|length }}</h3>
-            <p class="stat-desc">Technicians on shift</p>
+            <div class="stat-header"><span class="stat-label">Nurse Requests</span><i data-lucide="clipboard-list" class="stat-icon-small blue"></i></div>
+            <h3 class="stat-value">{{ total_submitted }}</h3>
+            <p class="stat-desc">Submitted on selected date</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">Tech Actions</span><i data-lucide="activity" class="stat-icon-small orange"></i></div>
+            <h3 class="stat-value">{{ total_tech_actions }}</h3>
+            <p class="stat-desc">{{ operators|length }} technician(s) active</p>
           </div>
         </div>
 
         <div class="detail-card list-card" style="padding:0;overflow:hidden;margin-top:1.25rem;">
-          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Batch Log ΓÇö {{ report_date }}</h4></div>
+          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Nurse Requests Submitted - {{ report_date }}</h4></div>
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Request</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Nurse</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Department</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Priority</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Items</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Status</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in nurse_requests %}
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 16px;font-weight:600;color:#2563eb;">REQ-{{ req.id|stringformat:"04d" }}</td>
+                <td style="padding:10px 16px;">{{ req.requester.email }}</td>
+                <td style="padding:10px 16px;">{{ req.department }}</td>
+                <td style="padding:10px 16px;"><span class="pill {% if req.priority == 'Urgent' %}pill-urgent{% else %}pill-normal{% endif %}">{{ req.priority }}</span></td>
+                <td style="padding:10px 16px;">
+                  {% for item in req.items.all %}
+                    <div>{{ item.quantity }}x {{ item.inventory_item.name }}</div>
+                  {% empty %}
+                    -
+                  {% endfor %}
+                </td>
+                <td style="padding:10px 16px;"><span class="pill status-{{ req.status }}">{{ req.status }}</span></td>
+                <td style="padding:10px 16px;color:#64748b;">{{ req.submitted_at|date:'H:i' }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:#94a3b8;">No nurse requests submitted for this date.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-card list-card" style="padding:0;overflow:hidden;margin-top:1.25rem;">
+          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Technician Work - {{ report_date }}</h4></div>
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Time</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Request</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Action</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Technician</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Department</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Batch</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in technician_actions %}
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 16px;color:#64748b;">{{ row.happened_at|date:'H:i' }}</td>
+                <td style="padding:10px 16px;font-weight:600;color:#2563eb;">REQ-{{ row.request.id|stringformat:"04d" }}</td>
+                <td style="padding:10px 16px;"><span class="pill status-{{ row.action }}">{{ row.action }}</span></td>
+                <td style="padding:10px 16px;">{% if row.operator %}{{ row.operator.email }}{% else %}-{% endif %}</td>
+                <td style="padding:10px 16px;">{{ row.request.department }}</td>
+                <td style="padding:10px 16px;">{% if row.request.batch %}Batch #{{ row.request.batch.id }}{% else %}-{% endif %}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8;">No technician work recorded for this date.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-card list-card" style="padding:0;overflow:hidden;margin-top:1.25rem;">
+          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Batch Log - {{ report_date }}</h4></div>
           <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
             <thead>
               <tr style="background:#f8fafc;">
@@ -69,9 +139,11 @@
               <tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px 16px;font-weight:600;color:#2563eb;">Batch #{{ b.id }}</td>
                 <td style="padding:10px 16px;">{{ b.operator.email }}</td>
-                <td style="padding:10px 16px;">{{ b.temperature }}┬░C</td>
+                <td style="padding:10px 16px;">{{ b.temperature }} C</td>
                 <td style="padding:10px 16px;">{{ b.cycle_duration }} min</td>
-                <td style="padding:10px 16px;"><span class="pill pill-normal">{{ b.status }}</span></td>
+                <td style="padding:10px 16px;">
+                  <span class="pill {% if b.status == 'Completed' %}pill-outline-completed{% else %}pill-outline-in-progress{% endif %}">{{ b.status }}</span>
+                </td>
                 <td style="padding:10px 16px;color:#64748b;">{{ b.created_at|date:'H:i' }}</td>
               </tr>
               {% empty %}
@@ -81,6 +153,41 @@
           </table>
         </div>
 
+        <div class="detail-card list-card" style="padding:0;overflow:hidden;margin-top:1.25rem;">
+          <div class="card-header pb-border" style="padding:1rem 1.25rem;"><h4>Sterilized Requests - {{ report_date }}</h4></div>
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Request</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Department</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Items</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Batch</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Operator</th>
+                <th style="padding:10px 16px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Sterilized</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in requests %}
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 16px;font-weight:600;color:#2563eb;">REQ-{{ req.id|stringformat:"04d" }}</td>
+                <td style="padding:10px 16px;">{{ req.department }}</td>
+                <td style="padding:10px 16px;">
+                  {% for item in req.items.all %}
+                    <div>{{ item.quantity }}x {{ item.inventory_item.name }}</div>
+                  {% empty %}
+                    -
+                  {% endfor %}
+                </td>
+                <td style="padding:10px 16px;">{% if req.batch %}Batch #{{ req.batch.id }}{% else %}-{% endif %}</td>
+                <td style="padding:10px 16px;">{% if req.last_operator %}{{ req.last_operator.email }}{% elif req.batch %}{{ req.batch.operator.email }}{% else %}-{% endif %}</td>
+                <td style="padding:10px 16px;color:#64748b;">{{ req.sterilized_at|date:'H:i' }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8;">No sterilized requests recorded for this date.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>

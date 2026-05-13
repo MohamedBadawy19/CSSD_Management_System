@@ -242,8 +242,8 @@ class TestRoleBasedRouting:
         client = Client()
         client.login(email="hadmin@test.com", password=TEST_PASSWORD)
         resp = client.get(reverse("dashboard_router"))
-        assert resp.status_code == 200
-        assert "cssd-dashboard.html" in [t.name for t in resp.templates]
+        assert resp.status_code == 302
+        assert "/dashboard/hospital/" in resp.url
 
     @pytest.mark.django_db
     def test_unauthenticated_user_redirected_to_login(self):
@@ -465,6 +465,6 @@ class TestDashboardIntegration:
     def test_request_rejected_when_stock_insufficient(self):
         """Submitting a quantity > stock renders a warning instead of redirect."""
         resp = self._submit_request("Normal", [("Surgical Scalpel", 999)])
-        # Should render the form again with a warning, not redirect
-        assert resp.status_code == 200
-        assert "warning" in resp.context
+        # Should redirect back to create request with a django message warning
+        assert resp.status_code == 302
+        assert reverse("nurse_create_request") in resp.url
