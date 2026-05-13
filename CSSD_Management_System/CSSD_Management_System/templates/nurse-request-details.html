@@ -129,8 +129,8 @@
       <div class="vertical-timeline">
 
         <!-- Requested -->
-        <div class="vt-item">
-          <div class="vt-icon" style="background-color:green;">✔</div>
+        <div class="vt-item step-submitted completed">
+          <div class="vt-icon">✔</div>
           {% if not forloop.last %}<div class="vt-line"></div>{% endif %}
           <div class="vt-content">
             <h5>Requested</h5>
@@ -139,11 +139,11 @@
         </div>
 
         <!-- Collected -->
-        <div class="vt-item">
+        <div class="vt-item step-collected {% if req.collected_at %}completed{% else %}pending{% endif %}">
           {% if req.collected_at %}
-            <div class="vt-icon" style="background-color:green;">✔</div>
+            <div class="vt-icon">✔</div>
           {% else %}
-            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+            <div class="vt-icon"><i data-lucide="clock"></i></div>
           {% endif %}
           <div class="vt-line"></div>
           <div class="vt-content">
@@ -153,11 +153,11 @@
         </div>
 
         <!-- Cleaned -->
-        <div class="vt-item">
+        <div class="vt-item step-cleaned {% if req.cleaned_at %}completed{% else %}pending{% endif %}">
           {% if req.cleaned_at %}
-            <div class="vt-icon" style="background-color:green;">✔</div>
+            <div class="vt-icon">✔</div>
           {% else %}
-            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+            <div class="vt-icon"><i data-lucide="clock"></i></div>
           {% endif %}
           <div class="vt-line"></div>
           <div class="vt-content">
@@ -167,11 +167,11 @@
         </div>
 
         <!-- Sterilized -->
-        <div class="vt-item">
+        <div class="vt-item step-sterilized {% if req.sterilized_at %}completed{% else %}pending{% endif %}">
           {% if req.sterilized_at %}
-            <div class="vt-icon" style="background-color:green;">✔</div>
+            <div class="vt-icon">✔</div>
           {% else %}
-            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+            <div class="vt-icon"><i data-lucide="clock"></i></div>
           {% endif %}
           <div class="vt-line"></div>
           <div class="vt-content">
@@ -181,11 +181,11 @@
         </div>
 
         <!-- Packed -->
-        <div class="vt-item">
+        <div class="vt-item step-packed {% if req.packed_at %}completed{% else %}pending{% endif %}">
           {% if req.packed_at %}
-            <div class="vt-icon" style="background-color:green;">✔</div>
+            <div class="vt-icon">✔</div>
           {% else %}
-            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+            <div class="vt-icon"><i data-lucide="clock"></i></div>
           {% endif %}
           <div class="vt-line"></div>
           <div class="vt-content">
@@ -195,11 +195,11 @@
         </div>
 
         <!-- Delivered -->
-        <div class="vt-item">
+        <div class="vt-item step-delivered {% if req.delivered_at %}completed{% else %}pending{% endif %}">
           {% if req.delivered_at %}
-            <div class="vt-icon" style="background-color:green;">✔</div>
+            <div class="vt-icon">✔</div>
           {% else %}
-            <div class="vt-icon" style="background-color:#94a3b8;"><i data-lucide="clock"></i></div>
+            <div class="vt-icon"><i data-lucide="clock"></i></div>
           {% endif %}
           <div class="vt-content">
             <h5>Delivered</h5>

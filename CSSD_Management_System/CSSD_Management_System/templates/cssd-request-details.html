@@ -24,8 +24,25 @@
     .node-circle      { width:32px; height:32px; border-radius:50%; background:#e2e8f0;
                         color:#94a3b8; display:flex; align-items:center; justify-content:center;
                         font-size:.8rem; font-weight:700; }
-    .ht-node.completed .node-circle { background:#0d9488; color:#fff; }
-    .ht-node.current  .node-circle  { background:#2563eb; color:#fff; box-shadow:0 0 0 4px #bfdbfe; }
+    .ht-node.step-requested .node-circle,
+    .ht-node.step-requested.completed .node-circle,
+    .ht-node.step-requested.current .node-circle { background:#f97316; border-color:#fed7aa; color:#fff; }
+    .ht-node.step-collected .node-circle,
+    .ht-node.step-collected.completed .node-circle,
+    .ht-node.step-collected.current .node-circle { background:#2563eb; border-color:#bfdbfe; color:#fff; }
+    .ht-node.step-cleaned .node-circle,
+    .ht-node.step-cleaned.completed .node-circle,
+    .ht-node.step-cleaned.current .node-circle { background:#06b6d4; border-color:#a5f3fc; color:#fff; }
+    .ht-node.step-sterilized .node-circle,
+    .ht-node.step-sterilized.completed .node-circle,
+    .ht-node.step-sterilized.current .node-circle { background:#4f46e5; border-color:#c7d2fe; color:#fff; }
+    .ht-node.step-packed .node-circle,
+    .ht-node.step-packed.completed .node-circle,
+    .ht-node.step-packed.current .node-circle { background:#9333ea; border-color:#e9d5ff; color:#fff; }
+    .ht-node.step-delivered .node-circle,
+    .ht-node.step-delivered.completed .node-circle,
+    .ht-node.step-delivered.current .node-circle { background:#059669; border-color:#a7f3d0; color:#fff; }
+    .ht-node.current .node-circle { box-shadow:0 0 0 5px rgba(37,99,235,.22); }
     .ht-node p        { font-size:.72rem; color:#64748b; margin:0; text-align:center; }
     .ht-node .ht-ts   { font-size:.65rem; color:#0d9488; font-weight:600; text-align:center; }
     .ht-current       { font-size:.65rem; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;
@@ -188,7 +205,7 @@
 
 
             <!-- Requested -->
-            <div class="ht-node {% if req.status == 'Requested' %}current{% else %}completed{% endif %}">
+            <div class="ht-node step-requested {% if req.status == 'Requested' %}current{% else %}completed{% endif %}">
               <div class="node-circle">1</div>
               <p>Requested</p>
               <span class="ht-ts">{{ req.submitted_at|date:"H:i" }}</span>
@@ -196,7 +213,7 @@
             <div class="ht-line {% if req.status != 'Requested' %}completed{% endif %}"></div>
 
             <!-- Collected -->
-            <div class="ht-node
+            <div class="ht-node step-collected
               {% if req.status == 'Collected' %}current
               {% elif req.collected_at %}completed{% endif %}">
               <div class="node-circle">2</div>
@@ -207,7 +224,7 @@
             <div class="ht-line {% if req.cleaned_at %}completed{% endif %}"></div>
 
             <!-- Cleaned -->
-            <div class="ht-node
+            <div class="ht-node step-cleaned
               {% if req.status == 'Cleaned' %}current
               {% elif req.cleaned_at %}completed{% endif %}">
               <div class="node-circle">3</div>
@@ -218,7 +235,7 @@
             <div class="ht-line {% if req.sterilized_at %}completed{% endif %}"></div>
 
             <!-- Sterilized -->
-            <div class="ht-node
+            <div class="ht-node step-sterilized
               {% if req.status == 'Sterilized' %}current
               {% elif req.sterilized_at %}completed{% endif %}">
               <div class="node-circle">4</div>
@@ -229,7 +246,7 @@
             <div class="ht-line {% if req.packed_at %}completed{% endif %}"></div>
 
             <!-- Packed -->
-            <div class="ht-node
+            <div class="ht-node step-packed
               {% if req.status == 'Packed' %}current
               {% elif req.packed_at %}completed{% endif %}">
               <div class="node-circle">5</div>
@@ -240,7 +257,7 @@
             <div class="ht-line {% if req.delivered_at %}completed{% endif %}"></div>
 
             <!-- Delivered -->
-            <div class="ht-node {% if req.delivered_at %}completed{% endif %}">
+            <div class="ht-node step-delivered {% if req.delivered_at %}completed{% endif %}">
               <div class="node-circle">6</div>
               <p>Delivered</p>
               {% if req.delivered_at %}<span class="ht-ts">{{ req.delivered_at|date:"H:i" }}</span>{% endif %}

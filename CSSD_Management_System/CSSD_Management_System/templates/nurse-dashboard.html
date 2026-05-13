@@ -38,6 +38,15 @@
     <main class="dashboard-main">
       <div class="dashboard-container">
 
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert-banner success" style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;color:#166534;display:flex;align-items:center;gap:.6rem;">
+              <i data-lucide="check-circle-2" style="width:18px;height:18px;flex-shrink:0;"></i>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
         {% if notifications %}
         <div id="notifBanner" style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem;margin-bottom:1rem;">
           <strong style="color:#16a34a;font-size:.85rem;">🔔 New updates ({{ notif_count }})</strong>

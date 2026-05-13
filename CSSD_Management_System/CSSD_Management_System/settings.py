@@ -57,7 +57,7 @@ ROOT_URLCONF = 'CSSD_Management_System.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'CSSD_Management_System' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -121,11 +121,12 @@ STATIC_URL = '/static/'
 
 # Custom User Model
 AUTH_USER_MODEL = 'CSSD_Management_System.CustomUser'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentication Settings
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard_router'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'home'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'CSSD_Management_System', 'static'),

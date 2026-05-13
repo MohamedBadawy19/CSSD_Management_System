@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}CSSD Admin{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">CSSD Management Admin</a>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<a href="{% url 'hospital_report' %}"
+   style="display:inline-block;margin-left:16px;padding:6px 10px;border-radius:4px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">
+  Daily Sterilization Report
+</a>
+<a href="{% url 'hospital_audit' %}"
+   style="display:inline-block;margin-left:8px;padding:6px 10px;border-radius:4px;background:#0f766e;color:#fff;text-decoration:none;font-weight:600;">
+  Audit History
+</a>
+{% endblock %}
