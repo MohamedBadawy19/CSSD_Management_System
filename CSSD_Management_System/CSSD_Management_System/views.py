@@ -85,6 +85,10 @@ def _sync_instrument_set_to_inventory(instrument_set):
     )
 
 
+def _dashboard_shortage_alerts():
+    return InventoryItem.objects.filter(current_stock__lt=3).order_by('current_stock', 'name')
+
+
 @login_required
 @admin_required
 def admin_instrument_set_list(request):
@@ -164,7 +168,8 @@ def dashboard_router(request):
         stat_active  = all_requests.filter(
             status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']
         ).count()
-        stat_alerts  = InventoryItem.objects.filter(current_stock__lt=3).count()
+        shortage_alerts = _dashboard_shortage_alerts()
+        stat_alerts  = shortage_alerts.count()
         STATUS_ORDER = ['Requested', 'Collected', 'Cleaned', 'Sterilized', 'Packed', 'Delivered']
         urgent_reqs  = all_requests.filter(priority='Urgent').exclude(status='Delivered')
         eta_text, eta_desc = 'No urgent', 'All clear'
@@ -182,6 +187,7 @@ def dashboard_router(request):
             'stat_pending':  stat_pending,
             'stat_active':   stat_active,
             'stat_alerts':   stat_alerts,
+            'shortage_alerts': shortage_alerts,
             'eta_text':      eta_text,
             'eta_desc':      eta_desc,
         }
@@ -349,14 +355,22 @@ def _notify_nurse(request_obj, message):
 @cssd_staff_required
 def cssd_dashboard(request):
     all_requests = InstrumentRequest.objects.filter(is_archived=False).order_by('-submitted_at')
+    shortage_alerts = _dashboard_shortage_alerts()
     context = {
         'staff_name': request.user.email.split('@')[0].capitalize(),
         'staff_role': request.user.role,
+        'stat_pending': all_requests.filter(status='Requested').count(),
+        'stat_active': all_requests.filter(status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']).count(),
+        'stat_alerts': shortage_alerts.count(),
+        'eta_text': 'No urgent',
+        'eta_desc': 'All clear',
+        'filter_status': '',
+        'shortage_alerts': shortage_alerts,
         'stats': {
             'pending': all_requests.filter(status='Requested').count(),
             'in_progress': all_requests.filter(status__in=['Collected', 'Cleaned', 'Sterilized', 'Packed']).count(),
             'completed': all_requests.filter(status='Delivered').count(),
-            'alerts': InventoryItem.objects.filter(current_stock__lt=3).count(),
+            'alerts': shortage_alerts.count(),
         },
         'requests': all_requests[:10],
         'show_pending_only': False,

@@ -396,6 +396,66 @@ class TestDashboardIntegration:
         assert resp.status_code == 200
         assert InstrumentRequest.objects.count() == 2
 
+    def test_cssd_dashboard_shows_shortage_alerts_with_set_name_and_count(self):
+        """
+        CSSD Tech sees dashboard alerts when available stock drops below 3 units.
+        """
+        InventoryItem.objects.create(
+            name="Biopsy Tray",
+            category="Surgical",
+            current_stock=2,
+            min_threshold=3,
+        )
+        InventoryItem.objects.create(
+            name="Suture Tray",
+            category="Surgical",
+            current_stock=3,
+            min_threshold=3,
+        )
+
+        resp = self.cssd_client.get(reverse("dashboard_router"))
+        content = resp.content.decode()
+
+        assert resp.status_code == 200
+        assert "Instrument set shortage alerts" in content
+        assert "Biopsy Tray" in content
+        assert "Current count: 2" in content
+        assert "Dismiss Biopsy Tray shortage alert" in content
+        assert "Suture Tray" not in content
+
+    def test_dismissed_dashboard_shortage_alert_reappears_on_reload_if_stock_still_low(self):
+        """
+        Dismissal is intentionally temporary: the server renders the alert again
+        while stock remains below 3 units.
+        """
+        InventoryItem.objects.create(
+            name="Trauma Tray",
+            category="Emergency",
+            current_stock=1,
+            min_threshold=3,
+        )
+
+        first_resp = self.cssd_client.get(reverse("dashboard_router"))
+        second_resp = self.cssd_client.get(reverse("dashboard_router"))
+
+        assert "Trauma Tray" in first_resp.content.decode()
+        assert "Trauma Tray" in second_resp.content.decode()
+
+    def test_direct_cssd_dashboard_shows_shortage_alerts_after_login_redirect(self):
+        InventoryItem.objects.create(
+            name="Ortho Mini Set",
+            category="Orthopedic",
+            current_stock=0,
+            min_threshold=3,
+        )
+
+        resp = self.cssd_client.get(reverse("cssd_dashboard"))
+        content = resp.content.decode()
+
+        assert resp.status_code == 200
+        assert "Ortho Mini Set" in content
+        assert "Current count: 0" in content
+
     # ── Step 4: Nurse login → /dashboard/ ──────────────────────────────────
 
     def test_nurse_sees_nurse_dashboard(self):
