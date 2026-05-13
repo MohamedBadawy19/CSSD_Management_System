@@ -217,9 +217,11 @@
       <ul class="instrument-checklist">
         {% for item in items %}
           <li>
-            <span>{{item}}</span>
+            <span>{{ item.quantity }}× {{ item.inventory_item.name }}</span>
             <i data-lucide="check-circle-2" class="icon-green"></i>
           </li>
+        {% empty %}
+          <li style="color:#94a3b8;">No instruments recorded for this request.</li>
         {% endfor %}
       </ul>
     </div>

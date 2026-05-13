@@ -973,11 +973,14 @@ def nurse_request_details(request, request_id):
         if mins > 0
     }
 
+    items = req.items.select_related('inventory_item').all()
+
     return render(request, 'nurse-request-details.html', {
         'req': req,
         'eta': eta,
         'eta_breakdown': eta_breakdown,
         'remaining_minutes': _ETA_MINUTES.get(req.status, 0),
+        'items': items,
     })
 # ---------------------------------------------------------------------------
 # US-27: View Inventory Shortage Alerts  ← FEATURE
@@ -1025,6 +1028,3 @@ def cssd_inventory_alerts(request):
         'categories': categories,
         'selected_category': category_filter,
     })
-
-
-

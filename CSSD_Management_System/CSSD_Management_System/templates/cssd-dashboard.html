@@ -80,6 +80,7 @@
     }
     .shortage-dismiss:hover { background: #ffedd5; }
     .shortage-alerts-empty { display: none; padding: 1rem 1.25rem; color: #64748b; }
+    .alert-dismissed { display: none !important; }
   </style>
 </head>
 <body>
@@ -296,15 +297,37 @@
         button.addEventListener('click', () => {
           const alert = button.closest('[data-shortage-alert]');
           if (!alert) return;
-          alert.hidden = true;
 
-          const visibleAlerts = document.querySelectorAll('[data-shortage-alert]:not([hidden])');
-          const emptyState = document.getElementById('shortageAlertsEmpty');
-          if (emptyState && visibleAlerts.length === 0) {
-            emptyState.style.display = 'block';
+          // Mark dismissed in sessionStorage so it reappears on next page load
+          const itemId = alert.dataset.itemId;
+          const dismissed = JSON.parse(sessionStorage.getItem('dismissedAlerts') || '[]');
+          if (!dismissed.includes(itemId)) {
+            dismissed.push(itemId);
+            sessionStorage.setItem('dismissedAlerts', JSON.stringify(dismissed));
+          }
+
+          alert.classList.add('alert-dismissed');
+
+          const visibleAlerts = document.querySelectorAll('[data-shortage-alert]:not(.alert-dismissed)');
+          if (visibleAlerts.length === 0) {
+            const panel = document.getElementById('shortageAlertsPanel');
+            if (panel) panel.style.display = 'none';
           }
         });
       });
+
+      // On load: re-dismiss any alerts that were dismissed this session
+      // (they will fully reappear on next page load / hard refresh, per spec)
+      const dismissedOnLoad = JSON.parse(sessionStorage.getItem('dismissedAlerts') || '[]');
+      dismissedOnLoad.forEach(itemId => {
+        const alert = document.querySelector(`[data-shortage-alert][data-item-id="${itemId}"]`);
+        if (alert) alert.classList.add('alert-dismissed');
+      });
+      const stillVisible = document.querySelectorAll('[data-shortage-alert]:not(.alert-dismissed)');
+      if (stillVisible.length === 0) {
+        const panel = document.getElementById('shortageAlertsPanel');
+        if (panel) panel.style.display = 'none';
+      }
     });
   </script>
 </body>
