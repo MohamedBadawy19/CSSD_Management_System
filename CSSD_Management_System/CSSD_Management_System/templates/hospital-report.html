@@ -28,6 +28,10 @@
           <label style="font-size:.8rem;font-weight:600;color:#64748b;">Select Date:</label>
           <input type="date" name="date" value="{{ date_str }}" class="form-input" style="width:auto;padding:6px 10px;">
           <button type="submit" class="btn-primary" style="padding:7px 16px;font-size:.85rem;">View Report</button>
+          <a href="?date={{ date_str }}&export=pdf" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;font-size:.85rem;text-decoration:none;">
+            <i data-lucide="download" style="width:15px;height:15px;"></i>
+            Download PDF
+          </a>
         </form>
 
         <div class="cssd-stats-grid">
