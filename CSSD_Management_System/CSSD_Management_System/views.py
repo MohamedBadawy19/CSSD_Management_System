@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import textwrap
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -487,6 +488,215 @@ def cssd_batch_create(request):
     return render(request, 'cssd-batch-create.html', {'form': form})
 
 
+def _pdf_safe_text(value):
+    text = '' if value is None else str(value)
+    replacements = {
+        '\u2013': '-',
+        '\u2014': '-',
+        '\u2018': "'",
+        '\u2019': "'",
+        '\u201c': '"',
+        '\u201d': '"',
+        '\u00b0': ' degrees',
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text.encode('latin-1', errors='replace').decode('latin-1')
+
+
+def _pdf_escape(value):
+    text = _pdf_safe_text(value)
+    return text.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+
+
+def _request_items_summary(request_obj):
+    items = [
+        f"{item.quantity}x {item.inventory_item.name}"
+        for item in request_obj.items.all()
+    ]
+    return ', '.join(items) if items else '-'
+
+
+def _build_pdf(lines):
+    page_height = 842
+    margin = 40
+    y_start = 800
+    y_min = 46
+    pages = []
+    commands = []
+    y = y_start
+
+    def finish_page():
+        nonlocal commands
+        if commands:
+            pages.append(''.join(commands))
+            commands = []
+
+    for entry in lines:
+        if entry is None:
+            y -= 8
+            continue
+
+        text, font, size = entry[:3]
+        leading = entry[3] if len(entry) > 3 else size + 5
+        wrap_width = 58 if size >= 16 else 76 if size >= 12 else 104
+        wrapped_lines = textwrap.wrap(_pdf_safe_text(text), width=wrap_width) or ['']
+
+        for index, wrapped_text in enumerate(wrapped_lines):
+            if y < y_min:
+                finish_page()
+                y = y_start
+            line_font = font if index == 0 else 'F1'
+            line_size = size if index == 0 else min(size, 9)
+            commands.append(
+                f"BT /{line_font} {line_size} Tf {margin} {y} Td ({_pdf_escape(wrapped_text)}) Tj ET\n"
+            )
+            y -= leading
+
+    finish_page()
+    if not pages:
+        pages = ['']
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+    ]
+    page_refs = []
+
+    for content in pages:
+        content_bytes = content.encode('latin-1', errors='replace')
+        content_id = len(objects) + 1
+        objects.append(
+            b"<< /Length " + str(len(content_bytes)).encode('ascii') + b" >>\nstream\n"
+            + content_bytes
+            + b"endstream"
+        )
+        page_id = len(objects) + 1
+        page_refs.append(f"{page_id} 0 R")
+        objects.append(
+            (
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 "
+                f"{page_height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> "
+                f"/Contents {content_id} 0 R >>"
+            ).encode('ascii')
+        )
+
+    objects[1] = (
+        f"<< /Type /Pages /Kids [{' '.join(page_refs)}] /Count {len(page_refs)} >>"
+    ).encode('ascii')
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{index} 0 obj\n".encode('ascii'))
+        pdf.extend(obj)
+        pdf.extend(b"\nendobj\n")
+
+    xref_position = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode('ascii'))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode('ascii'))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref_position}\n%%EOF\n"
+        ).encode('ascii')
+    )
+    return bytes(pdf)
+
+
+def _daily_report_pdf_response(context):
+    def operator_email(operator):
+        return operator.email if operator else '-'
+
+    lines = [
+        ('Daily Sterilization Report', 'F2', 18, 24),
+        (f"Report date: {context['report_date']}", 'F1', 11, 16),
+        None,
+        ('Summary', 'F2', 13, 18),
+        (f"Total batches: {context['total_batches']}", 'F1', 10, 14),
+        (f"Sterilized items: {context['total_sterilized']}", 'F1', 10, 14),
+        (f"Nurse requests submitted: {context['total_submitted']}", 'F1', 10, 14),
+        (f"Technician actions: {context['total_tech_actions']}", 'F1', 10, 14),
+        (f"Active technicians: {len(context['operators'])}", 'F1', 10, 14),
+        None,
+        ('Nurse Requests Submitted', 'F2', 13, 18),
+    ]
+
+    nurse_requests = list(context['nurse_requests'])
+    if nurse_requests:
+        for req in nurse_requests:
+            submitted = timezone.localtime(req.submitted_at).strftime('%H:%M')
+            lines.append((
+                f"REQ-{req.id:04d} | {req.requester.email} | {req.department} | "
+                f"{req.priority} | {req.status} | {submitted} | {_request_items_summary(req)}",
+                'F1',
+                9,
+                12,
+            ))
+    else:
+        lines.append(('No nurse requests submitted for this date.', 'F1', 10, 14))
+
+    lines.extend([None, ('Technician Work', 'F2', 13, 18)])
+    technician_actions = list(context['technician_actions'])
+    if technician_actions:
+        for row in technician_actions:
+            happened = timezone.localtime(row['happened_at']).strftime('%H:%M')
+            batch = f"Batch #{row['request'].batch.id}" if row['request'].batch else '-'
+            lines.append((
+                f"{happened} | REQ-{row['request'].id:04d} | {row['action']} | "
+                f"{operator_email(row['operator'])} | {row['request'].department} | {batch}",
+                'F1',
+                9,
+                12,
+            ))
+    else:
+        lines.append(('No technician work recorded for this date.', 'F1', 10, 14))
+
+    lines.extend([None, ('Batch Log', 'F2', 13, 18)])
+    batches = list(context['batches'])
+    if batches:
+        for batch in batches:
+            created = timezone.localtime(batch.created_at).strftime('%H:%M')
+            lines.append((
+                f"Batch #{batch.id} | {operator_email(batch.operator)} | "
+                f"{batch.temperature} C | {batch.cycle_duration} min | {batch.status} | {created}",
+                'F1',
+                9,
+                12,
+            ))
+    else:
+        lines.append(('No batches recorded for this date.', 'F1', 10, 14))
+
+    lines.extend([None, ('Sterilized Requests', 'F2', 13, 18)])
+    sterilized_requests = list(context['requests'])
+    if sterilized_requests:
+        for req in sterilized_requests:
+            sterilized = timezone.localtime(req.sterilized_at).strftime('%H:%M')
+            batch = f"Batch #{req.batch.id}" if req.batch else '-'
+            operator = req.last_operator or (req.batch.operator if req.batch else None)
+            lines.append((
+                f"REQ-{req.id:04d} | {req.department} | {batch} | "
+                f"{operator_email(operator)} | {sterilized} | {_request_items_summary(req)}",
+                'F1',
+                9,
+                12,
+            ))
+    else:
+        lines.append(('No sterilized requests recorded for this date.', 'F1', 10, 14))
+
+    pdf = _build_pdf(lines)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="daily-sterilization-report-{context["date_str"]}.pdf"'
+    )
+    return response
+
+
 @login_required
 @hospital_admin_required
 def hospital_report(request):
@@ -580,6 +790,8 @@ def hospital_report(request):
         'total_tech_actions': len(technician_actions),
         'operators': operators,
     }
+    if request.GET.get('export') == 'pdf':
+        return _daily_report_pdf_response(context)
     return render(request, 'hospital-report.html', context)
 
 
