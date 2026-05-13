@@ -15,6 +15,71 @@
       border-radius:6px;padding:2px 8px;font-size:.72rem;font-weight:500;
     }
     .eta-badge.urgent { background:#fef2f2;color:#dc2626;border-color:#fecaca; }
+    .shortage-alerts-panel {
+      margin: 0 0 1.5rem;
+      border: 1px solid #fecaca;
+      background: #fff7ed;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(124, 45, 18, 0.08);
+    }
+    .shortage-alerts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .shortage-alerts-title {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      color: #9a3412;
+      font-weight: 800;
+    }
+    .shortage-alert-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: .75rem;
+      padding: 1rem 1.25rem;
+    }
+    .shortage-alert {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      background: #fff;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: .85rem 1rem;
+    }
+    .shortage-alert strong { color: #7c2d12; }
+    .shortage-alert-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 800;
+    }
+    .shortage-dismiss {
+      border: 0;
+      background: transparent;
+      color: #9a3412;
+      cursor: pointer;
+      width: 2rem;
+      height: 2rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    .shortage-dismiss:hover { background: #ffedd5; }
+    .shortage-alerts-empty { display: none; padding: 1rem 1.25rem; color: #64748b; }
   </style>
 </head>
 <body>
@@ -107,6 +172,39 @@
         </div>
 
         <!-- ── Search bar ── -->
+        {% if shortage_alerts %}
+        <section class="shortage-alerts-panel" id="shortageAlertsPanel" aria-label="Shortage alerts">
+          <div class="shortage-alerts-header">
+            <div class="shortage-alerts-title">
+              <i data-lucide="alert-triangle" style="width:18px;height:18px;"></i>
+              <span>Instrument set shortage alerts</span>
+            </div>
+            <a href="{% url 'cssd_inventory_alerts' %}" class="nav-action-link" style="background:#fff;color:#9a3412;border-color:#fed7aa;">
+              View inventory
+            </a>
+          </div>
+          <div class="shortage-alert-list" id="shortageAlertList">
+            {% for item in shortage_alerts %}
+            <article class="shortage-alert" data-shortage-alert data-item-id="{{ item.id }}">
+              <div>
+                <strong>{{ item.name }}</strong>
+                <div style="font-size:.82rem;color:#64748b;">Current count: {{ item.current_stock }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <span class="shortage-alert-count" aria-label="{{ item.current_stock }} units available">{{ item.current_stock }}</span>
+                <button type="button" class="shortage-dismiss" data-dismiss-shortage aria-label="Dismiss {{ item.name }} shortage alert">
+                  <i data-lucide="x" style="width:16px;height:16px;"></i>
+                </button>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+          <div class="shortage-alerts-empty" id="shortageAlertsEmpty">
+            All shortage alerts dismissed for now.
+          </div>
+        </section>
+        {% endif %}
+
         <div class="cssd-filters-bar">
           <div class="search-input-wrapper expand">
             <i data-lucide="search" class="search-icon"></i>
@@ -191,6 +289,20 @@
         rows.forEach(row => {
           const hay = (row.dataset.search || '').toLowerCase();
           row.style.display = hay.includes(q) ? '' : 'none';
+        });
+      });
+
+      document.querySelectorAll('[data-dismiss-shortage]').forEach(button => {
+        button.addEventListener('click', () => {
+          const alert = button.closest('[data-shortage-alert]');
+          if (!alert) return;
+          alert.hidden = true;
+
+          const visibleAlerts = document.querySelectorAll('[data-shortage-alert]:not([hidden])');
+          const emptyState = document.getElementById('shortageAlertsEmpty');
+          if (emptyState && visibleAlerts.length === 0) {
+            emptyState.style.display = 'block';
+          }
         });
       });
     });
