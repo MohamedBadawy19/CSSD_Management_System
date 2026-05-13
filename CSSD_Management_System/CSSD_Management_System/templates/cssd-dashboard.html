@@ -30,6 +30,12 @@
         </div>
       </div>
       <div class="nav-actions">
+        {% if request.user.role == 'System Administrator' %}
+        <a href="{% url 'admin_instrument_set_list' %}" class="nav-action-link" id="instrumentSetsBtn">
+          <i data-lucide="package-plus" style="width:14px;height:14px;"></i>
+          Instrument Sets
+        </a>
+        {% endif %}
         <a href="{% url 'cssd_batch_create' %}" class="nav-action-link" id="newBatchBtn">
           <i data-lucide="flask-conical" style="width:14px;height:14px;"></i>
           New Batch
