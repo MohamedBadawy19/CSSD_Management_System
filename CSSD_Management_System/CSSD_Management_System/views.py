@@ -113,6 +113,10 @@ def login_view(request):
                 form.add_error(None, "This account is not allowed to use this portal.")
                 return render(request, template_name, {'form': form})
             login(request, user)
+            # Honor ?next= from @login_required redirect
+            next_url = request.POST.get('next') or request.GET.get('next', '')
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
             if user.role == 'Department Nurse':
                 return redirect('nurse_dashboard')
             return redirect('cssd_dashboard')

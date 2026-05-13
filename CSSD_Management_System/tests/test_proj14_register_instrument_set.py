@@ -154,8 +154,8 @@ class TestInstrumentSetForm:
 @pytest.mark.django_db
 class TestAdminRegisterInstrumentSetView:
 
-    REGISTER_URL = '/admin/instrument-sets/register/'
-    LIST_URL     = '/admin/instrument-sets/'
+    REGISTER_URL = '/manage/instrument-sets/register/'
+    LIST_URL     = '/manage/instrument-sets/'
 
     # ── Access control ────────────────────────────────────────────────────────
 

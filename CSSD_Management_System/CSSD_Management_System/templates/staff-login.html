@@ -44,6 +44,9 @@
           <form id="loginForm" data-role="Staff" action="{% url 'login' %}?role=staff" method="post">
             {% csrf_token %}
             <input type="hidden" name="portal_role" value="staff">
+            {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
             <div class="form-group">
               <label class="form-label">Email Address</label>
               <div class="input-wrapper">
