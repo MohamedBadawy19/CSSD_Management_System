@@ -3,6 +3,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # US-04: Register & List Instrument Sets (System Admin)
+    # Keep these before Django admin's catch-all /admin/ route.
+    path('admin/instrument-sets/', views.admin_instrument_set_list, name='admin_instrument_set_list'),
+    path('admin/instrument-sets/register/', views.admin_register_instrument_set, name='admin_register_instrument_set'),
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('login/', views.login_view, name='login'),
@@ -56,4 +60,5 @@ urlpatterns = [
     path('dashboard/hospital/audit/', views.hospital_audit, name='hospital_audit'),
     # Nurse notifications
     path('dashboard/nurse/notifications/mark-read/', views.nurse_mark_notifications_read, name='nurse_mark_notifications_read'),
+
 ]

@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrument Sets — CSSD Admin</title>
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'extended_styles.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="dashboard-wrapper theme-blue">
+
+    <nav class="dashboard-nav theme-dark-blue">
+      <div class="nav-brand">
+        <a href="{% url 'dashboard_router' %}" class="btn-back-icon">
+          <i data-lucide="arrow-left"></i>
+        </a>
+        <div class="nav-title">
+          <h2>Instrument Sets</h2>
+          <p>All registered sets in the tracking system</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="{% url 'admin_register_instrument_set' %}"
+           class="btn-submit active"
+           id="btn-register-new-set"
+           style="text-decoration:none;font-size:0.875rem;display:flex;align-items:center;gap:.4rem;">
+          <i data-lucide="plus-circle"></i> Register New Set
+        </a>
+      </div>
+    </nav>
+
+    <main class="dashboard-main">
+      <div class="container-center">
+
+        {% if messages %}
+          {% for msg in messages %}
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;color:#16a34a;font-size:.875rem;display:flex;align-items:center;gap:.5rem;">
+              <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <!-- Stats row -->
+        <div class="cssd-stats-grid" style="margin-bottom:1.5rem;">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Sets</span>
+              <i data-lucide="package" class="stat-icon-small grey"></i>
+            </div>
+            <h3 class="stat-value">{{ instrument_sets.count }}</h3>
+            <p class="stat-desc">Registered instrument sets</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Unassigned</span>
+              <i data-lucide="inbox" class="stat-icon-small grey"></i>
+            </div>
+            <h3 class="stat-value">{{ instrument_sets|length }}</h3>
+            <p class="stat-desc">Ready to enter lifecycle</p>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="detail-card list-card">
+          <div class="card-header pb-border" style="display:flex;justify-content:space-between;align-items:center;">
+            <h4>All Instrument Sets</h4>
+            <span style="font-size:.8rem;color:#64748b;">{{ instrument_sets.count }} total</span>
+          </div>
+
+          {% if instrument_sets %}
+            <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+              <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;text-align:left;">
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">ID</th>
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">Set Name</th>
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">Type</th>
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">Quantity</th>
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">State</th>
+                  <th style="padding:.75rem 1rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05rem;">Registered</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for iset in instrument_sets %}
+                  <tr style="border-bottom:1px solid #f1f5f9;transition:background .15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                    <td style="padding:.75rem 1rem;color:#94a3b8;font-size:.8rem;">#{{ iset.pk }}</td>
+                    <td style="padding:.75rem 1rem;font-weight:600;color:#1e293b;">{{ iset.name }}</td>
+                    <td style="padding:.75rem 1rem;color:#475569;">{{ iset.type }}</td>
+                    <td style="padding:.75rem 1rem;color:#475569;">{{ iset.quantity }}</td>
+                    <td style="padding:.75rem 1rem;">
+                      {% if iset.state == 'Unassigned' %}
+                        <span class="pill" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:.75rem;padding:.2rem .65rem;border-radius:20px;">Unassigned</span>
+                      {% elif iset.state == 'Delivered' %}
+                        <span class="pill" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;font-size:.75rem;padding:.2rem .65rem;border-radius:20px;">Delivered</span>
+                      {% else %}
+                        <span class="pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:.75rem;padding:.2rem .65rem;border-radius:20px;">{{ iset.state }}</span>
+                      {% endif %}
+                    </td>
+                    <td style="padding:.75rem 1rem;color:#94a3b8;font-size:.8rem;">{{ iset.created_at|date:"d M Y, H:i" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div style="display:flex;flex-direction:column;align-items:center;padding:3rem;gap:1rem;color:#94a3b8;text-align:center;">
+              <i data-lucide="package-open" style="width:48px;height:48px;color:#cbd5e1;"></i>
+              <h4 style="margin:0;color:#64748b;">No Instrument Sets Registered Yet</h4>
+              <p style="margin:0;font-size:.875rem;">Click "Register New Set" to add the first instrument set.</p>
+              <a href="{% url 'admin_register_instrument_set' %}" class="btn-submit active" style="text-decoration:none;margin-top:.5rem;">
+                <i data-lucide="plus-circle"></i> Register First Set
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

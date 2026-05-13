@@ -10,8 +10,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .decorators import cssd_staff_required, hospital_admin_required
-from .forms import EmailLoginForm, SterilizationBatchForm
+from .decorators import admin_required, cssd_staff_required, hospital_admin_required
+from .forms import EmailLoginForm, InstrumentSetForm, SterilizationBatchForm
 from .models import (CustomUser, InstrumentRequest, InstrumentSet, InventoryItem,
                      Notification, RequestItem, SterilizationBatch)
 
@@ -29,6 +29,72 @@ from .models import (CustomUser, InstrumentRequest, InstrumentSet, InventoryItem
 
 
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# US-04  Register New Instrument Set  (System Administrator only)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_register_instrument_set(request):
+    """
+    US-04 — Register New Instrument Set.
+
+    Acceptance criteria:
+    • AC-1: Given System Admin fills in name, type, quantity and clicks Save,
+            Then the new set appears in the DB with state 'Unassigned'.
+    • AC-2: Given a duplicate name is submitted,
+            Then the system rejects it with a clear error message.
+    """
+    if request.method == 'POST':
+        form = InstrumentSetForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                instrument_set = form.save()  # state defaults to 'Unassigned'
+                _sync_instrument_set_to_inventory(instrument_set)
+            messages.success(
+                request,
+                f'Instrument set "{instrument_set.name}" registered successfully '
+                f'with state "Unassigned" (ID: {instrument_set.pk}).'
+            )
+            return redirect('admin_instrument_set_list')
+    else:
+        form = InstrumentSetForm()
+    return render(request, 'admin-register-instrument-set.html', {'form': form})
+
+
+def _sync_instrument_set_to_inventory(instrument_set):
+    """
+    Keep admin-registered instrument sets available to nurse request workflows.
+    """
+    inventory_matches = InventoryItem.objects.filter(name__iexact=instrument_set.name)
+    if inventory_matches.exists():
+        inventory_matches.update(
+            category=instrument_set.type,
+            current_stock=instrument_set.quantity,
+            min_threshold=3,
+        )
+        return
+
+    InventoryItem.objects.create(
+        name=instrument_set.name,
+        category=instrument_set.type,
+        current_stock=instrument_set.quantity,
+        min_threshold=3,
+    )
+
+
+@login_required
+@admin_required
+def admin_instrument_set_list(request):
+    """
+    Lists all registered instrument sets so the admin can confirm registration.
+    """
+    instrument_sets = InstrumentSet.objects.all().order_by('-created_at')
+    return render(request, 'admin-instrument-set-list.html', {
+        'instrument_sets': instrument_sets,
+    })
 
 
 def login_view(request):
