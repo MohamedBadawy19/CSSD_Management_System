@@ -74,10 +74,12 @@ The application will be available at `http://127.0.0.1:8000/`.
 
 * **Intelligence & Alerts:** * **Heuristic ETA:** Real-time completion time estimates for clinical planning.
   <img width="1908" height="806" alt="Screenshot 2026-05-14 231013" src="https://github.com/user-attachments/assets/79ddbaf3-9dcf-47c4-b49c-00dbb9884364" />
+  
 * **Status Notifications:** Instant updates for nurses as instruments progress through the CSSD.
-<img width="1900" height="811" alt="Screenshot 2026-05-14 230910" src="https://github.com/user-attachments/assets/581c7b32-9e6b-4d7a-934d-6671c5efbb00" />
+  <img width="1900" height="811" alt="Screenshot 2026-05-14 230910" src="https://github.com/user-attachments/assets/581c7b32-9e6b-4d7a-934d-6671c5efbb00" />
+
 * **Compliance & Auditing:** Immutable audit logs for every state transition, including timestamps and operator IDs.
-<img width="1887" height="804" alt="Screenshot 2026-05-14 230939" src="https://github.com/user-attachments/assets/348b1fd3-c94a-4145-b5a6-d6fa2b7fec16" />
+  <img width="1887" height="804" alt="Screenshot 2026-05-14 230939" src="https://github.com/user-attachments/assets/348b1fd3-c94a-4145-b5a6-d6fa2b7fec16" />
 ---
 
 ##  Tech Stack
