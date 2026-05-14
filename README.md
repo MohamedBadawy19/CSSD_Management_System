@@ -66,7 +66,8 @@ The application will be available at `http://127.0.0.1:8000/`.
  
 * **Sterilization State Machine:** A rigid 5-stage workflow (Collected → Cleaned → Sterilized → Packed → Delivered) that prevents "state-skipping" to ensure medical safety.
   
-<img width="1899" height="808" alt="Screenshot 2026-05-14 230959" src="https://github.com/user-attachments/assets/d717736a-9d7d-4ca2-b3a4-dc863a4d3507" />
+<img width="1600" height="764" alt="WhatsApp Image 2026-05-14 at 11 55 41 PM" src="https://github.com/user-attachments/assets/cf7858f8-82d1-48e0-b21b-61165845b82b" />
+
 
 * **Inventory Management:** Live tracking of sterile and non-sterile items with automated threshold alerts for low stock.
   <img width="1899" height="810" alt="Screenshot 2026-05-14 230920" src="https://github.com/user-attachments/assets/20c3011a-2635-4b16-97ce-b5ef6da57378" />
