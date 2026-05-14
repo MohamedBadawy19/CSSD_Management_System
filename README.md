@@ -70,7 +70,8 @@ The application will be available at `http://127.0.0.1:8000/`.
 
 
 * **Inventory Management:** Live tracking of sterile and non-sterile items with automated threshold alerts for low stock.
-  <img width="1899" height="810" alt="Screenshot 2026-05-14 230920" src="https://github.com/user-attachments/assets/20c3011a-2635-4b16-97ce-b5ef6da57378" />
+ <img width="1600" height="759" alt="WhatsApp Image 2026-05-14 at 11 55 42 PM" src="https://github.com/user-attachments/assets/2233d06b-ab45-4a93-bc74-8f40840ca508" />
+
 
 * **Intelligence & Alerts:** * **Heuristic ETA:** Real-time completion time estimates for clinical planning.
   <img width="1908" height="806" alt="Screenshot 2026-05-14 231013" src="https://github.com/user-attachments/assets/79ddbaf3-9dcf-47c4-b49c-00dbb9884364" />
