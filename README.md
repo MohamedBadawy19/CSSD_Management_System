@@ -63,18 +63,21 @@ The application will be available at `http://127.0.0.1:8000/`.
 ##  Key Features
 
 * **Role-Based Routing:** Automated redirection to appropriate dashboards (Nurse vs. CSSD) upon secure login.
-  
+ <img width="1899" height="801" alt="Screenshot 2026-05-14 230848" src="https://github.com/user-attachments/assets/e928cb43-5271-42d8-833e-f07f8cfbb045" />
+ 
 * **Sterilization State Machine:** A rigid 5-stage workflow (Collected → Cleaned → Sterilized → Packed → Delivered) that prevents "state-skipping" to ensure medical safety.
   
+<img width="1899" height="808" alt="Screenshot 2026-05-14 230959" src="https://github.com/user-attachments/assets/d717736a-9d7d-4ca2-b3a4-dc863a4d3507" />
+
 * **Inventory Management:** Live tracking of sterile and non-sterile items with automated threshold alerts for low stock.
-  
+  <img width="1899" height="810" alt="Screenshot 2026-05-14 230920" src="https://github.com/user-attachments/assets/20c3011a-2635-4b16-97ce-b5ef6da57378" />
+
 * **Intelligence & Alerts:** * **Heuristic ETA:** Real-time completion time estimates for clinical planning.
-  
+  <img width="1908" height="806" alt="Screenshot 2026-05-14 231013" src="https://github.com/user-attachments/assets/79ddbaf3-9dcf-47c4-b49c-00dbb9884364" />
 * **Status Notifications:** Instant updates for nurses as instruments progress through the CSSD.
-
-
+<img width="1900" height="811" alt="Screenshot 2026-05-14 230910" src="https://github.com/user-attachments/assets/581c7b32-9e6b-4d7a-934d-6671c5efbb00" />
 * **Compliance & Auditing:** Immutable audit logs for every state transition, including timestamps and operator IDs.
-
+<img width="1887" height="804" alt="Screenshot 2026-05-14 230939" src="https://github.com/user-attachments/assets/348b1fd3-c94a-4145-b5a6-d6fa2b7fec16" />
 ---
 
 ##  Tech Stack
