@@ -1,4 +1,3 @@
-Here is your updated and complete **README.md**, incorporating the setup instructions and mock credentials into the professional project overview.
 
 # CSSD Instrument Tracking System
 
